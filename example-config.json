@@ -1,0 +1,31 @@
+{
+  "width": 600,
+  "height": 900,
+  "depth": 400,
+  "thickness": 18,
+  "drawer_thickness": 18,
+  "back_panel": true,
+  "back_thickness": 18,
+  "clearance": 2,
+  "sink": 6,
+  "sheet_length": 2440,
+  "sheet_width": 1220,
+  "kerf": 3,
+  "rows": [
+    {
+      "drawers": 2,
+      "height": "auto",
+      "widths": "auto"
+    },
+    {
+      "drawers": 3,
+      "height": "auto",
+      "widths": "auto"
+    },
+    {
+      "drawers": 1,
+      "height": 360,
+      "widths": "auto"
+    }
+  ]
+}

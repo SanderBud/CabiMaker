@@ -1,0 +1,1174 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Cabinet Builder</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Barlow+Semi+Condensed:wght@500;600;700&family=JetBrains+Mono:wght@400;500&family=Source+Sans+3:wght@400;600&display=swap">
+<style>
+/* Layout: workbench — control column on the left, 3D viewer + cut list on the right; stacks on phones. */
+:root {
+  --bg: #eceee9; --panel: #fbfcfa; --ink: #1c2320; --muted: #5a655f; --line: #d3d8d2;
+  --accent: #1f6a58; --accent-ink: #ffffff; --accent-soft: #d6e8e1;
+  --scene: #e2e6e0; --ply: #dcbc8c; --ply-drawer: #e8d2a8; --ply-back: #b99569; --ply-edge: #4a3b28;
+  --dim: #1d5aa6; --dim-bg: rgba(255,255,255,.92); --warn: #8a5a00; --warn-bg: #fbefd2; --err: #a8261f; --err-bg: #f9dedb;
+  --hl: #1f9d7a;
+  --f-display: "Barlow Semi Condensed", "Arial Narrow", system-ui, sans-serif;
+  --f-body: "Source Sans 3", system-ui, -apple-system, "Segoe UI", sans-serif;
+  --f-mono: "JetBrains Mono", ui-monospace, "Cascadia Mono", Consolas, monospace;
+  --r: 6px;
+}
+@media (prefers-color-scheme: dark) { :root:not([data-theme="light"]) {
+  --bg: #141916; --panel: #1b211e; --ink: #e4e9e5; --muted: #98a39c; --line: #2e3833;
+  --accent: #5cbf9f; --accent-ink: #0b1411; --accent-soft: #1f3a31;
+  --scene: #191f1b; --ply: #c9a672; --ply-drawer: #d9bd8c; --ply-back: #8e7150; --ply-edge: #2a2015;
+  --dim: #86b6ff; --dim-bg: rgba(20,26,23,.9); --warn: #f0c46a; --warn-bg: #3a2f14; --err: #ff9b92; --err-bg: #3d1b18;
+  --hl: #4fd6ae; color-scheme: dark;
+} }
+:root[data-theme="dark"] {
+  --bg: #141916; --panel: #1b211e; --ink: #e4e9e5; --muted: #98a39c; --line: #2e3833;
+  --accent: #5cbf9f; --accent-ink: #0b1411; --accent-soft: #1f3a31;
+  --scene: #191f1b; --ply: #c9a672; --ply-drawer: #d9bd8c; --ply-back: #8e7150; --ply-edge: #2a2015;
+  --dim: #86b6ff; --dim-bg: rgba(20,26,23,.9); --warn: #f0c46a; --warn-bg: #3a2f14; --err: #ff9b92; --err-bg: #3d1b18;
+  --hl: #4fd6ae; color-scheme: dark;
+}
+* { box-sizing: border-box; }
+[hidden] { display: none !important; }
+body { background: var(--bg); color: var(--ink); font: 15px/1.45 var(--f-body); margin: 0; }
+.app { display: grid; grid-template-columns: 340px minmax(0, 1fr); gap: 20px; padding-block: 20px; padding-inline: 20px; max-width: 1500px; margin: 0 auto; }
+header.top { grid-column: 1 / -1; display: flex; align-items: baseline; gap: 14px; flex-wrap: wrap; }
+h1 { font: 700 28px/1.1 var(--f-display); letter-spacing: .01em; margin: 0; text-wrap: balance; }
+.tag { font: 500 12px var(--f-mono); color: var(--muted); }
+aside { display: flex; flex-direction: column; gap: 14px; min-width: 0; }
+section.box { background: var(--panel); border: 1px solid var(--line); border-radius: var(--r); padding: 14px; display: flex; flex-direction: column; gap: 10px; }
+h2 { font: 600 13px/1 var(--f-display); text-transform: uppercase; letter-spacing: .09em; color: var(--muted); margin: 0; }
+.grid3 { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 8px; }
+.grid2 { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 8px; }
+label.f { display: flex; flex-direction: column; gap: 3px; font-size: 13px; color: var(--muted); min-width: 0; }
+.inp { position: relative; }
+.inp input { width: 100%; }
+.inp[data-unit]::after { content: attr(data-unit); position: absolute; right: 8px; top: 50%; transform: translateY(-50%); font: 11px var(--f-mono); color: var(--muted); pointer-events: none; }
+.inp[data-unit] input { padding-right: 30px; }
+input[type="number"], input[type="text"] { font: 14px var(--f-mono); color: var(--ink); background: var(--bg); border: 1px solid var(--line); border-radius: 4px; padding: 6px 8px; min-width: 0; }
+input:focus-visible, button:focus-visible { outline: 2px solid var(--accent); outline-offset: 1px; }
+input.bad { border-color: var(--err); }
+.hint { font-size: 12.5px; color: var(--muted); margin: 0; }
+.check { display: flex; align-items: center; gap: 8px; font-size: 14px; }
+.check input { accent-color: var(--accent); width: 16px; height: 16px; }
+.row-card { border: 1px solid var(--line); border-radius: 4px; padding: 8px; display: flex; flex-direction: column; gap: 6px; background: var(--bg); }
+.row-head { display: flex; justify-content: space-between; align-items: center; font: 600 14px var(--f-display); letter-spacing: .02em; }
+.row-head small { font: 400 12px var(--f-body); color: var(--muted); margin-left: 6px; }
+.row-fields { display: grid; grid-template-columns: 70px 80px minmax(0, 1fr); gap: 6px; }
+.row-fields label { display: flex; flex-direction: column; gap: 2px; font-size: 11.5px; color: var(--muted); min-width: 0; }
+.row-fields input { background: var(--panel); }
+.row-tools { display: flex; gap: 6px; }
+button { font: 600 13.5px var(--f-body); border-radius: 4px; border: 1px solid var(--line); background: var(--panel); color: var(--ink); padding: 6px 10px; cursor: pointer; }
+button:hover { border-color: var(--accent); }
+button.primary { background: var(--accent); color: var(--accent-ink); border-color: var(--accent); }
+button.icon { padding: 2px 8px; font-size: 16px; line-height: 1; }
+button:disabled { opacity: .45; cursor: default; }
+button[aria-pressed="true"] { background: var(--accent-soft); border-color: var(--accent); }
+main { display: flex; flex-direction: column; gap: 14px; min-width: 0; }
+.viewer-wrap { background: var(--panel); border: 1px solid var(--line); border-radius: var(--r); overflow: hidden; display: flex; flex-direction: column; }
+.toolbar { display: flex; flex-wrap: wrap; gap: 6px; padding: 8px; border-bottom: 1px solid var(--line); align-items: center; }
+.toolbar .sep { flex: 1; }
+.toolbar .hint { margin-right: 4px; }
+#viewer { position: relative; height: min(64vh, 640px); min-height: 320px; background: var(--scene); touch-action: none; }
+#viewer canvas { display: block; }
+#labels { position: absolute; inset: 0; pointer-events: none; }
+.status { position: absolute; inset: 0; display: grid; place-items: center; font: 500 14px var(--f-mono); color: var(--muted); text-align: center; padding: 16px; }
+#viewer.stale canvas { opacity: .35; }
+.dim-label { font: 500 11.5px/1.2 var(--f-mono); color: var(--dim); background: var(--dim-bg); padding: 2px 5px; border-radius: 3px; border: 1px solid color-mix(in srgb, var(--dim) 35%, transparent); white-space: nowrap; font-variant-numeric: tabular-nums; }
+.dim-label.drawer { text-align: center; color: var(--ink); border-color: var(--line); }
+.dim-label.drawer b { display: block; font-weight: 500; color: var(--dim); }
+.dim-label.drawer span { color: var(--muted); font-size: 10.5px; }
+.info { position: absolute; left: 10px; bottom: 10px; max-width: min(360px, calc(100% - 20px)); background: var(--panel); border: 1px solid var(--line); border-radius: var(--r); padding: 10px 12px; font-size: 13px; box-shadow: 0 6px 20px rgba(0,0,0,.12); }
+.info h3 { margin: 0 0 4px; font: 700 16px var(--f-display); }
+.info dl { display: grid; grid-template-columns: auto 1fr; gap: 2px 10px; margin: 0; }
+.info dt { color: var(--muted); }
+.info dd { margin: 0; font-family: var(--f-mono); font-variant-numeric: tabular-nums; }
+.msgs { display: flex; flex-direction: column; gap: 6px; }
+.msg { padding: 8px 10px; border-radius: 4px; font-size: 13.5px; }
+.msg.warn { background: var(--warn-bg); color: var(--warn); }
+.msg.err { background: var(--err-bg); color: var(--err); font-weight: 600; }
+.summary { display: flex; flex-wrap: wrap; gap: 6px 18px; font-size: 13.5px; color: var(--muted); }
+.summary b { font: 500 14px var(--f-mono); color: var(--ink); font-variant-numeric: tabular-nums; }
+.tabs { display: flex; gap: 2px; border-bottom: 1px solid var(--line); flex-wrap: wrap; }
+.tabs button { border: none; border-bottom: 2px solid transparent; border-radius: 0; background: none; color: var(--muted); padding: 8px 12px; font: 600 15px var(--f-display); letter-spacing: .02em; }
+.tabs button[aria-selected="true"] { color: var(--ink); border-bottom-color: var(--accent); }
+.panel { background: var(--panel); border: 1px solid var(--line); border-top: none; border-radius: 0 0 var(--r) var(--r); padding: 12px; min-width: 0; }
+.tablewrap { overflow-x: auto; }
+table { border-collapse: collapse; width: 100%; font-size: 13.5px; }
+th { text-align: left; font: 600 12px var(--f-display); text-transform: uppercase; letter-spacing: .07em; color: var(--muted); padding: 6px 8px; border-bottom: 1px solid var(--line); white-space: nowrap; }
+td { padding: 6px 8px; border-bottom: 1px solid var(--line); vertical-align: top; }
+td.n { font-family: var(--f-mono); text-align: right; font-variant-numeric: tabular-nums; white-space: nowrap; }
+th.n { text-align: right; }
+tbody tr:hover, tbody tr.sel { background: var(--accent-soft); }
+.mark { display: inline-block; min-width: 24px; text-align: center; font: 600 12px var(--f-mono); background: var(--ink); color: var(--panel); border-radius: 3px; padding: 1px 4px; }
+.where { color: var(--muted); font-size: 12.5px; }
+.note { font-size: 12.5px; color: var(--dim); }
+.panel-tools { display: flex; gap: 8px; flex-wrap: wrap; margin-bottom: 10px; align-items: center; }
+.sheets { display: grid; grid-template-columns: repeat(auto-fill, minmax(320px, 1fr)); gap: 14px; }
+.sheet h4 { margin: 0 0 4px; font: 600 14px var(--f-display); }
+.sheet svg { width: 100%; height: auto; display: block; }
+.sheet .s-bg { fill: var(--bg); stroke: var(--muted); stroke-width: 4; }
+.sheet .s-part { fill: var(--ply); stroke: var(--ply-edge); stroke-width: 3; }
+.sheet .s-txt { fill: #2a2015; font-family: var(--f-mono); font-weight: 600; text-anchor: middle; dominant-baseline: central; }
+.rules { margin: 0; padding-left: 18px; display: flex; flex-direction: column; gap: 6px; max-width: 75ch; }
+.rules li::marker { color: var(--accent); }
+kbd { font: 12px var(--f-mono); border: 1px solid var(--line); border-radius: 3px; padding: 0 4px; }
+@media (max-width: 900px) {
+  .app { grid-template-columns: minmax(0, 1fr); padding-inline: 16px; }
+  #viewer { height: 58vh; }
+}
+@media (prefers-reduced-motion: reduce) { * { transition: none !important; } }
+</style>
+<script type="importmap">{"imports":{"three":"https://cdn.jsdelivr.net/npm/three@0.170.0/build/three.module.js","three/addons/":"https://cdn.jsdelivr.net/npm/three@0.170.0/examples/jsm/"}}</script>
+</head>
+<body>
+<div class="app">
+  <header class="top">
+    <h1>Cabinet Builder</h1>
+    <span class="tag">plywood drawer cabinet · all sizes in mm</span>
+  </header>
+
+  <aside>
+    <section class="box">
+      <h2>Outer dimensions</h2>
+      <div class="grid3">
+        <label class="f">Width<span class="inp" data-unit="mm"><input id="width" data-key="width" type="number" min="50" step="1"></span></label>
+        <label class="f">Height<span class="inp" data-unit="mm"><input id="height" data-key="height" type="number" min="50" step="1"></span></label>
+        <label class="f">Depth<span class="inp" data-unit="mm"><input id="depth" data-key="depth" type="number" min="50" step="1"></span></label>
+      </div>
+    </section>
+
+    <section class="box">
+      <h2>Plywood</h2>
+      <div class="grid2">
+        <label class="f">Cabinet thickness<span class="inp" data-unit="mm"><input id="thickness" data-key="thickness" type="number" min="1" step="0.5"></span></label>
+        <label class="f">Drawer thickness<span class="inp" data-unit="mm"><input id="drawer_thickness" data-key="drawer_thickness" type="number" min="1" step="0.5"></span></label>
+      </div>
+      <label class="check"><input id="back_panel" data-key="back_panel" type="checkbox"> Back panel</label>
+      <label class="f">Back panel thickness<span class="inp" data-unit="mm"><input id="back_thickness" data-key="back_thickness" type="number" min="1" step="0.5"></span></label>
+    </section>
+
+    <section class="box">
+      <h2>Fit</h2>
+      <div class="grid2">
+        <label class="f">Drawer margin per side<span class="inp" data-unit="mm"><input id="clearance" data-key="clearance" type="number" min="0" step="0.5"></span></label>
+        <label class="f">Column sink<span class="inp" data-unit="mm"><input id="sink" data-key="sink" type="number" min="0" step="0.5"></span></label>
+      </div>
+      <p class="hint">Margin is the gap between drawer and opening on each side and at the back. Column sink is the depth of the groove each column divider sits in, in the panel above and below it.</p>
+    </section>
+
+    <section class="box">
+      <h2>Layout, top to bottom</h2>
+      <div id="rows" class="msgs"></div>
+      <div class="row-tools">
+        <button type="button" id="add-row">Add row</button>
+        <button type="button" id="reset">Reset example</button>
+      </div>
+      <p class="hint">Height and widths: <kbd>auto</kbd> shares the remaining space. Widths take a list per drawer, e.g. <kbd>300, auto</kbd>.</p>
+    </section>
+
+    <section class="box">
+      <h2>Sheet &amp; saw</h2>
+      <div class="grid3">
+        <label class="f">Sheet length<span class="inp" data-unit="mm"><input id="sheet_length" data-key="sheet_length" type="number" min="100" step="1"></span></label>
+        <label class="f">Sheet width<span class="inp" data-unit="mm"><input id="sheet_width" data-key="sheet_width" type="number" min="100" step="1"></span></label>
+        <label class="f">Saw kerf<span class="inp" data-unit="mm"><input id="kerf" data-key="kerf" type="number" min="0" step="0.5"></span></label>
+      </div>
+    </section>
+  </aside>
+
+  <main>
+    <div class="viewer-wrap">
+      <div class="toolbar">
+        <button type="button" id="t-dims" aria-pressed="true">Dimensions</button>
+        <button type="button" id="t-open" aria-pressed="false">Open all drawers</button>
+        <button type="button" id="t-xray" aria-pressed="false">See-through cabinet</button>
+        <span class="sep"></span>
+        <span class="hint">Click a drawer to pull it out</span>
+        <button type="button" id="v-front">Front</button>
+        <button type="button" id="v-3d">3D</button>
+      </div>
+      <div id="viewer">
+        <div id="labels"></div>
+        <div class="status" id="status">Starting Python…</div>
+        <div class="info" id="info" hidden></div>
+      </div>
+    </div>
+    <div class="msgs" id="msgs"></div>
+    <div class="summary" id="summary"></div>
+    <div>
+      <div class="tabs" role="tablist">
+        <button type="button" role="tab" id="tab-cut" aria-selected="true" data-panel="p-cut">Cut list</button>
+        <button type="button" role="tab" id="tab-drawers" aria-selected="false" data-panel="p-drawers">Drawers</button>
+        <button type="button" role="tab" id="tab-sheets" aria-selected="false" data-panel="p-sheets">Sheet layout</button>
+        <button type="button" role="tab" id="tab-rules" aria-selected="false" data-panel="p-rules">Construction</button>
+      </div>
+      <div class="panel" id="p-cut" role="tabpanel">
+        <div class="panel-tools">
+          <button type="button" id="copy-csv">Copy as CSV</button>
+          <button type="button" id="dl-csv" hidden>Download CSV</button>
+          <span class="hint" id="copy-state"></span>
+        </div>
+        <div class="tablewrap"><table id="cut-table"></table></div>
+        <p class="hint" style="margin-top:8px">Length is the longer side of each piece. Hover a row to find those pieces in the 3D view.</p>
+      </div>
+      <div class="panel" id="p-drawers" role="tabpanel" hidden>
+        <div class="tablewrap"><table id="drawer-table"></table></div>
+        <p class="hint" style="margin-top:8px">Drawer 2.3 is row 2 (from the top), drawer 3 (from the left). Box = outside of the drawer; inside = usable storage space.</p>
+      </div>
+      <div class="panel" id="p-sheets" role="tabpanel" hidden>
+        <p class="hint" style="margin:0 0 10px">A quick shelf-style layout with the long side of each piece along the sheet length. Use it to estimate how many sheets to buy; a panel shop may nest tighter.</p>
+        <div class="sheets" id="sheets"></div>
+      </div>
+      <div class="panel" id="p-rules" role="tabpanel" hidden>
+        <ul class="rules">
+          <li>The two outer side panels run the full cabinet height. Top, bottom and shelves fit between them.</li>
+          <li>Each shelf between two rows is one continuous piece across the full inner width.</li>
+          <li>Column dividers stand between two horizontal panels and are sunk into a groove (dado) in both. Their length is the opening height plus twice the sink. Columns in different rows do not have to line up.</li>
+          <li>The back panel is screwed onto the back and covers the full width and height. Sides, top, bottom, shelves and dividers are therefore as deep as the cabinet minus the back panel.</li>
+          <li>Drawers are plain boxes with the front flush with the cabinet. The drawer margin is taken off every side and off the back.</li>
+          <li>Drawer sides run the full drawer depth; the drawer front and back fit between them. The bottom sits under the whole box.</li>
+          <li>The Python engine is <kbd>cabinet.py</kbd>; run <kbd>python cabinet.py config.json</kbd> for the same cut list in a terminal.</li>
+        </ul>
+      </div>
+    </div>
+  </main>
+</div>
+
+<script>
+window.onPythonReady = function () { window.__pyReady = true; if (window.__appStart) window.__appStart(); };
+</script>
+<script src="https://cdn.jsdelivr.net/npm/brython@3.14.3/brython.min.js"></script>
+<script type="text/python" id="cabinet-py">
+"""Cabinet Builder engine: plywood drawer cabinet -> 3D pieces + cut list.
+
+Pure Python without imports, so the same file runs under CPython (command line)
+and under Brython in the browser (GitHub Pages).
+
+Conventions (all sizes in mm)
+-----------------------------
+Coordinates: x = left -> right, y = floor -> top, z = back -> front (front face at z = depth).
+
+Carcass
+  * The two outer side panels run the full height.
+  * Top, bottom and the row shelves run between the side panels (full inner width,
+    continuous across the whole row, whatever the column layout above/below).
+  * Column dividers sit between two horizontal panels and are sunk `sink` mm into
+    a dado (groove) in the panel above and the panel below, so their length is
+    opening height + 2 * sink. Columns of different rows do not need to line up.
+  * Optional back panel is screwed on the back and covers the full width x height;
+    the carcass depth is then depth - back thickness, so the outer depth is kept.
+
+Drawers (plain boxes, front flush with the cabinet front)
+  * Drawer box = opening minus `clearance` on every side (left, right, top, bottom)
+    and minus `clearance` at the back.
+  * Bottom panel runs under the whole box footprint.
+  * The drawer sides run the full drawer depth; front and back fit between the sides.
+"""
+
+try:
+    from browser import window
+    IN_BROWSER = True
+except ImportError:
+    window = None
+    IN_BROWSER = False
+
+
+DEFAULT_CONFIG = {
+    "width": 600, "height": 900, "depth": 400,
+    "thickness": 18, "drawer_thickness": 18,
+    "back_panel": True, "back_thickness": 18,
+    "clearance": 2, "sink": 6,
+    "sheet_length": 2440, "sheet_width": 1220, "kerf": 3,
+    "rows": [
+        {"drawers": 2, "height": "auto", "widths": "auto"},
+        {"drawers": 3, "height": "auto", "widths": "auto"},
+        {"drawers": 1, "height": 360, "widths": "auto"},
+    ],
+}
+
+PART_ORDER = ["Side", "Top", "Bottom", "Shelf", "Divider", "Back panel",
+              "Drawer side", "Drawer front", "Drawer back", "Drawer bottom"]
+
+
+class CabinetError(Exception):
+    pass
+
+
+def r1(x):
+    """Round to 0.1 mm and drop the trailing .0."""
+    v = round(float(x) * 10) / 10
+    if v == int(v):
+        return int(v)
+    return v
+
+
+def num(cfg, key, minimum=None, allow_zero=True):
+    val = cfg.get(key, DEFAULT_CONFIG.get(key))
+    try:
+        v = float(val)
+    except (TypeError, ValueError):
+        raise CabinetError("'%s' must be a number (got %r)." % (key, val))
+    if minimum is not None and v < minimum:
+        raise CabinetError("'%s' must be at least %s mm." % (key, minimum))
+    if not allow_zero and v <= 0:
+        raise CabinetError("'%s' must be larger than 0." % key)
+    return v
+
+
+def parse_spec(spec, n, what):
+    """'auto' / '' / None -> [None]*n ; '300, auto, 200' -> [300, None, 200]."""
+    if spec is None:
+        return [None] * n
+    if isinstance(spec, (int, float)) and not isinstance(spec, bool):
+        items = [str(spec)]
+    else:
+        items = [p.strip() for p in str(spec).replace(";", ",").split(",")]
+        items = [p for p in items if p != ""]
+    if len(items) == 1 and items[0].lower() in ("auto", "a", "*"):
+        return [None] * n
+    if len(items) > n:
+        raise CabinetError("%s: %d values given for %d drawer(s)." % (what, len(items), n))
+    out = []
+    for p in items:
+        if p.lower() in ("auto", "a", "*"):
+            out.append(None)
+        else:
+            try:
+                v = float(p)
+            except ValueError:
+                raise CabinetError("%s: '%s' is not a number or 'auto'." % (what, p))
+            if v <= 0:
+                raise CabinetError("%s: sizes must be larger than 0." % what)
+            out.append(v)
+    while len(out) < n:
+        out.append(None)
+    return out
+
+
+def distribute(total, specs, what):
+    fixed = sum(v for v in specs if v is not None)
+    n_auto = len([v for v in specs if v is None])
+    if n_auto == 0:
+        if abs(fixed - total) > 0.05:
+            raise CabinetError("%s: fixed sizes add up to %s mm but %s mm is available. "
+                               "Set one of them to 'auto'." % (what, r1(fixed), r1(total)))
+        return list(specs)
+    rest = total - fixed
+    if rest <= 0:
+        raise CabinetError("%s: fixed sizes (%s mm) leave no room for the 'auto' ones "
+                           "(%s mm available)." % (what, r1(fixed), r1(total)))
+    each = rest / n_auto
+    return [each if v is None else v for v in specs]
+
+
+def box(x0, y0, z0, x1, y1, z1):
+    return [r1(x0), r1(y0), r1(z0), r1(x1), r1(y1), r1(z1)]
+
+
+def compute(cfg):
+    """Return a result dict. Raises CabinetError on impossible input."""
+    W = num(cfg, "width", allow_zero=False)
+    H = num(cfg, "height", allow_zero=False)
+    D = num(cfg, "depth", allow_zero=False)
+    t = num(cfg, "thickness", allow_zero=False)
+    td = num(cfg, "drawer_thickness", allow_zero=False)
+    has_back = bool(cfg.get("back_panel", True))
+    tb = num(cfg, "back_thickness", allow_zero=False) if has_back else 0.0
+    c = num(cfg, "clearance", minimum=0)
+    s = num(cfg, "sink", minimum=0)
+    sheet_l = num(cfg, "sheet_length", allow_zero=False)
+    sheet_w = num(cfg, "sheet_width", allow_zero=False)
+    kerf = num(cfg, "kerf", minimum=0)
+    rows_cfg = cfg.get("rows") or []
+    if len(rows_cfg) == 0:
+        raise CabinetError("Add at least one row.")
+
+    warnings = []
+    if s >= t:
+        raise CabinetError("Column sink (%s mm) must be less than the plywood thickness (%s mm)." % (r1(s), r1(t)))
+    if s > t / 2:
+        warnings.append("Column sink of %s mm is more than half the plywood thickness; "
+                        "dados from both sides of a shelf can weaken it." % r1(s))
+
+    Dc = D - tb          # carcass depth (sides, top, bottom, shelves, dividers)
+    z0 = tb              # carcass starts in front of the back panel
+    if Dc <= 0:
+        raise CabinetError("Depth is too small for the back panel.")
+    Wi = W - 2 * t       # inner width
+    Hi = H - 2 * t       # inner height
+    R = len(rows_cfg)
+    avail_h = Hi - (R - 1) * t
+    if Wi <= 0 or avail_h <= 0:
+        raise CabinetError("The cabinet is too small for this plywood thickness and number of rows.")
+
+    row_specs = []
+    counts = []
+    for i in range(R):
+        row = rows_cfg[i]
+        try:
+            n = int(float(row.get("drawers", 1)))
+        except (TypeError, ValueError):
+            raise CabinetError("Row %d: number of drawers must be a whole number." % (i + 1))
+        if n < 1:
+            raise CabinetError("Row %d: needs at least 1 drawer." % (i + 1))
+        counts.append(n)
+        row_specs.append(parse_spec(row.get("height", "auto"), 1, "Row %d height" % (i + 1))[0])
+    heights = distribute(avail_h, row_specs, "Row heights")
+
+    pieces = []
+
+    def add(part, label, L, Wd, T, bx, drawer=None, notes=None):
+        a, b = (L, Wd) if L >= Wd else (Wd, L)
+        if a <= 0 or b <= 0:
+            raise CabinetError("%s (%s) gets a size of %s x %s mm. Make the cabinet or opening larger."
+                               % (part, label, r1(L), r1(Wd)))
+        p = {"id": len(pieces), "part": part, "label": label,
+             "length": r1(a), "width": r1(b), "thickness": r1(T),
+             "box": bx, "drawer": drawer, "notes": notes or []}
+        pieces.append(p)
+        return p
+
+    # --- carcass -------------------------------------------------------------
+    add("Side", "left", H, Dc, t, box(0, 0, z0, t, H, D))
+    add("Side", "right", H, Dc, t, box(W - t, 0, z0, W, H, D))
+    top = add("Top", "top", Wi, Dc, t, box(t, H - t, z0, W - t, H, D))
+    horizontals = [top]  # panel above row i is horizontals[i]
+
+    openings = []
+    drawers = []
+    ytop = H - t
+    for i in range(R):
+        h = heights[i]
+        n = counts[i]
+        ybot = ytop - h
+        if h <= 0:
+            raise CabinetError("Row %d has no height left." % (i + 1))
+        wspecs = parse_spec(rows_cfg[i].get("widths", "auto"), n, "Row %d widths" % (i + 1))
+        avail_w = Wi - (n - 1) * t
+        if avail_w <= 0:
+            raise CabinetError("Row %d: too many drawers for this width." % (i + 1))
+        widths = distribute(avail_w, wspecs, "Row %d widths" % (i + 1))
+        # panel below this row
+        if i < R - 1:
+            below = add("Shelf", "between row %d and %d" % (i + 1, i + 2), Wi, Dc, t,
+                        box(t, ybot - t, z0, W - t, ybot, D))
+        else:
+            below = add("Bottom", "bottom", Wi, Dc, t, box(t, 0, z0, W - t, t, D))
+        above = horizontals[i]
+        horizontals.append(below)
+
+        x = t
+        for j in range(n):
+            w = widths[j]
+            if w <= 0:
+                raise CabinetError("Row %d, drawer %d has no width left." % (i + 1, j + 1))
+            did = "%d.%d" % (i + 1, j + 1)
+            openings.append({"id": did, "row": i + 1, "col": j + 1,
+                             "x0": r1(x), "x1": r1(x + w), "y0": r1(ybot), "y1": r1(ytop),
+                             "width": r1(w), "height": r1(h)})
+            drawers.append(make_drawer(add, did, x, ybot, w, h, D, Dc, c, td))
+            if j < n - 1:
+                xd = x + w
+                add("Divider", "row %d, between drawer %d and %d" % (i + 1, j + 1, j + 2),
+                    h + 2 * s, Dc, t, box(xd, ybot - s, z0, xd + t, ytop + s, D),
+                    notes=["length includes %s mm sink at both ends" % r1(s)] if s > 0 else [])
+                if s > 0:
+                    rel = xd - t  # position measured from the left end of the horizontal panel
+                    above["notes"].append(("dado underside %s-%s mm from left end, %s deep"
+                                           % (r1(rel), r1(rel + t), r1(s))))
+                    above.setdefault("dados", []).append({"face": "under", "from": r1(rel), "to": r1(rel + t)})
+                    below["notes"].append(("dado top face %s-%s mm from left end, %s deep"
+                                           % (r1(rel), r1(rel + t), r1(s))))
+                    below.setdefault("dados", []).append({"face": "top", "from": r1(rel), "to": r1(rel + t)})
+                x = xd + t
+        ytop = ybot - t
+
+    # shelves with dados on both faces at the same spot
+    for p in horizontals:
+        d = p.get("dados", [])
+        ups = [q for q in d if q["face"] == "top"]
+        downs = [q for q in d if q["face"] == "under"]
+        for u in ups:
+            for v in downs:
+                if u["from"] < v["to"] and v["from"] < u["to"] and 2 * s >= t:
+                    raise CabinetError("The %s gets dados on both faces at %s mm; with %s mm sink "
+                                       "they cut through. Reduce the sink or shift a column."
+                                       % (p["part"].lower(), u["from"], r1(s)))
+                if u["from"] < v["to"] and v["from"] < u["to"]:
+                    warnings.append("The %s (%s) has dados on both faces at %s mm: %s mm of wood remains there."
+                                    % (p["part"].lower(), p["label"], u["from"], r1(t - 2 * s)))
+
+    if has_back:
+        add("Back panel", "back", H, W, tb, box(0, 0, 0, W, H, tb))
+
+    cutlist = build_cutlist(pieces)
+    sheets = pack_sheets(pieces, cutlist, sheet_l, sheet_w, kerf, warnings)
+
+    area = 0.0
+    for p in pieces:
+        area += p["length"] * p["width"]
+    summary = {
+        "outer": [r1(W), r1(H), r1(D)],
+        "inner_width": r1(Wi), "carcass_depth": r1(Dc),
+        "row_heights": [r1(h) for h in heights],
+        "piece_count": len(pieces), "drawer_count": len(drawers),
+        "area_m2": round(area / 1e6 * 100) / 100,
+        "sheet_count": len(sheets),
+    }
+    return {"ok": True, "errors": [], "warnings": warnings, "summary": summary,
+            "openings": openings, "drawers": drawers, "pieces": pieces,
+            "cutlist": cutlist, "sheets": sheets}
+
+
+def make_drawer(add, did, x, y, w, h, D, Dc, c, td):
+    dw = w - 2 * c
+    dh = h - 2 * c
+    dd = Dc - c
+    if dw <= 2 * td + 1 or dh <= td + 1 or dd <= 2 * td + 1:
+        raise CabinetError("Drawer %s is too small (%s x %s x %s mm) for %s mm drawer plywood."
+                           % (did, r1(dw), r1(dh), r1(dd), r1(td)))
+    bx0 = x + c
+    by0 = y + c
+    bz0 = D - dd
+    tag = "drawer " + did
+    add("Drawer bottom", tag, dw, dd, td, box(bx0, by0, bz0, bx0 + dw, by0 + td, D), drawer=did)
+    add("Drawer side", tag + " left", dd, dh - td, td, box(bx0, by0 + td, bz0, bx0 + td, by0 + dh, D), drawer=did)
+    add("Drawer side", tag + " right", dd, dh - td, td,
+        box(bx0 + dw - td, by0 + td, bz0, bx0 + dw, by0 + dh, D), drawer=did)
+    add("Drawer front", tag, dw - 2 * td, dh - td, td,
+        box(bx0 + td, by0 + td, D - td, bx0 + dw - td, by0 + dh, D), drawer=did)
+    add("Drawer back", tag, dw - 2 * td, dh - td, td,
+        box(bx0 + td, by0 + td, bz0, bx0 + dw - td, by0 + dh, bz0 + td), drawer=did)
+    return {"id": did, "opening": [r1(w), r1(h)],
+            "outer": [r1(dw), r1(dh), r1(dd)],
+            "inner": [r1(dw - 2 * td), r1(dh - td), r1(dd - 2 * td)],
+            "box": box(bx0, by0, bz0, bx0 + dw, by0 + dh, D)}
+
+
+def letter(i):
+    s = ""
+    i += 1
+    while i > 0:
+        i, rem = divmod(i - 1, 26)
+        s = chr(65 + rem) + s
+    return s
+
+
+def build_cutlist(pieces):
+    groups = {}
+    order = []
+    for p in pieces:
+        key = (p["part"], p["length"], p["width"], p["thickness"], " / ".join(p["notes"]))
+        if key not in groups:
+            groups[key] = {"part": p["part"], "length": p["length"], "width": p["width"],
+                           "thickness": p["thickness"], "qty": 0, "where": [], "notes": list(p["notes"]),
+                           "piece_ids": []}
+            order.append(key)
+        g = groups[key]
+        g["qty"] += 1
+        g["where"].append(p["label"])
+        g["piece_ids"].append(p["id"])
+
+    def sort_key(k):
+        g = groups[k]
+        idx = PART_ORDER.index(g["part"]) if g["part"] in PART_ORDER else 99
+        return (-g["thickness"], idx, -g["length"], -g["width"])
+
+    order.sort(key=sort_key)
+    out = []
+    for n, k in enumerate(order):
+        g = groups[k]
+        g["mark"] = letter(n)
+        out.append(g)
+    mark_of = {}
+    for g in out:
+        for pid in g["piece_ids"]:
+            mark_of[pid] = g["mark"]
+    for p in pieces:
+        p["mark"] = mark_of[p["id"]]
+    return out
+
+
+def pack_sheets(pieces, cutlist, SL, SW, kerf, warnings):
+    """Simple shelf packing per thickness; grain (long side) along the sheet length.
+    Gives a realistic estimate, not an optimal nesting."""
+    by_t = {}
+    for p in pieces:
+        by_t.setdefault(p["thickness"], []).append(p)
+    sheets = []
+    for T in sorted(by_t.keys(), reverse=True):
+        items = []
+        for p in by_t[T]:
+            L, Wd = p["length"], p["width"]
+            if L > SL or Wd > SW:
+                if L <= SW and Wd <= SL:   # fits rotated (grain across)
+                    L, Wd = Wd, L
+                else:
+                    warnings.append("%s (%s, %s x %s mm) does not fit on a %s x %s sheet."
+                                    % (p["part"], p["label"], p["length"], p["width"], r1(SL), r1(SW)))
+                    continue
+            items.append((Wd, L, p))
+        items.sort(key=lambda it: (-it[0], -it[1]))
+        tsheets = []   # each: {"shelves": [[y, height, used_x]], "used_y": .., "parts": []}
+        for Wd, L, p in items:
+            placed = False
+            for sh in tsheets:
+                for shelf in sh["shelves"]:
+                    if Wd <= shelf[1] and shelf[2] + L <= SL:
+                        sh["parts"].append([r1(shelf[2]), r1(shelf[0]), L, Wd, p["mark"], p["id"]])
+                        shelf[2] += L + kerf
+                        placed = True
+                        break
+                if placed:
+                    break
+                if sh["used_y"] + Wd <= SW:
+                    y = sh["used_y"]
+                    sh["shelves"].append([y, Wd, L + kerf])
+                    sh["used_y"] = y + Wd + kerf
+                    sh["parts"].append([0, r1(y), L, Wd, p["mark"], p["id"]])
+                    placed = True
+                    break
+            if not placed:
+                sh = {"shelves": [[0, Wd, L + kerf]], "used_y": Wd + kerf,
+                      "parts": [[0, 0, L, Wd, p["mark"], p["id"]]]}
+                tsheets.append(sh)
+        for sh in tsheets:
+            used = 0.0
+            for q in sh["parts"]:
+                used += q[2] * q[3]
+            sheets.append({"thickness": T, "length": r1(SL), "width": r1(SW),
+                           "parts": sh["parts"], "fill": round(used / (SL * SW) * 100)})
+    return sheets
+
+
+# --- serialisation (no json module needed, so Brython runs without its stdlib) --
+
+def to_json(o):
+    if o is None:
+        return "null"
+    if o is True:
+        return "true"
+    if o is False:
+        return "false"
+    if isinstance(o, (int, float)):
+        if isinstance(o, float) and o == int(o) and abs(o) < 1e15:
+            return str(int(o))
+        return repr(o)
+    if isinstance(o, str):
+        out = ['"']
+        for ch in o:
+            if ch == '"':
+                out.append('\\"')
+            elif ch == "\\":
+                out.append("\\\\")
+            elif ord(ch) < 32:
+                out.append("\\u%04x" % ord(ch))
+            else:
+                out.append(ch)
+        out.append('"')
+        return "".join(out)
+    if isinstance(o, dict):
+        return "{" + ",".join(to_json(str(k)) + ":" + to_json(v) for k, v in o.items()) + "}"
+    if isinstance(o, (list, tuple)):
+        return "[" + ",".join(to_json(v) for v in o) + "]"
+    return to_json(str(o))
+
+
+def from_json(text):
+    # JSON is a valid Python expression once true/false/null are defined.
+    return eval(text, {"__builtins__": {}}, {"true": True, "false": False, "null": None})
+
+
+def compute_json(text):
+    """Browser entry point: JSON config string in, JSON result string out."""
+    try:
+        return to_json(compute(from_json(text)))
+    except CabinetError as e:
+        return to_json({"ok": False, "errors": [str(e)], "warnings": []})
+    except Exception as e:
+        return to_json({"ok": False, "errors": ["Unexpected error: %s" % e], "warnings": []})
+
+
+def print_cutlist(res):
+    if not res.get("ok", True):
+        print("ERROR:", "; ".join(res["errors"]))
+        return
+    print("%-4s %-14s %4s %8s %8s %5s  %s" % ("Mark", "Part", "Qty", "Length", "Width", "T", "Where / notes"))
+    for g in res["cutlist"]:
+        print("%-4s %-14s %4d %8s %8s %5s  %s" % (g["mark"], g["part"], g["qty"], g["length"], g["width"],
+                                                 g["thickness"], "; ".join(g["where"] + g["notes"])))
+    print()
+    for d in res["drawers"]:
+        print("Drawer %-5s opening %s x %s | box %s x %s x %s | inside %s x %s x %s" %
+              tuple([d["id"]] + d["opening"] + d["outer"] + d["inner"]))
+    s = res["summary"]
+    print("\n%d pieces, %.2f m2 plywood, about %d sheet(s)." % (s["piece_count"], s["area_m2"], s["sheet_count"]))
+    for w in res["warnings"]:
+        print("Warning:", w)
+
+
+if IN_BROWSER:
+    window.cabinet_compute = compute_json
+    if hasattr(window, "onPythonReady") and window.onPythonReady:
+        window.onPythonReady()
+elif __name__ == "__main__":
+    import sys
+    import json
+    cfg = DEFAULT_CONFIG
+    if len(sys.argv) > 1:
+        with open(sys.argv[1]) as fh:
+            cfg = json.load(fh)
+    try:
+        print_cutlist(compute(cfg))
+    except CabinetError as e:
+        print("ERROR:", e)
+        sys.exit(1)
+
+</script>
+
+<script type="module">
+import * as THREE from 'three';
+import { OrbitControls } from 'three/addons/controls/OrbitControls.js';
+import { CSS2DRenderer, CSS2DObject } from 'three/addons/renderers/CSS2DRenderer.js';
+
+const $ = (s) => document.querySelector(s);
+const STORE_KEY = 'cabinet-builder-v1';
+const DEFAULT = {
+  width: 600, height: 900, depth: 400, thickness: 18, drawer_thickness: 18,
+  back_panel: true, back_thickness: 18, clearance: 2, sink: 6,
+  sheet_length: 2440, sheet_width: 1220, kerf: 3,
+  rows: [
+    { drawers: 2, height: 'auto', widths: 'auto' },
+    { drawers: 3, height: 'auto', widths: 'auto' },
+    { drawers: 1, height: '360', widths: 'auto' },
+  ],
+};
+const clone = (o) => JSON.parse(JSON.stringify(o));
+let cfg = clone(DEFAULT);
+try {
+  const saved = JSON.parse(localStorage.getItem(STORE_KEY) || 'null');
+  if (saved && Array.isArray(saved.rows)) cfg = Object.assign(clone(DEFAULT), saved);
+} catch (e) { /* storage unavailable */ }
+const save = () => { try { localStorage.setItem(STORE_KEY, JSON.stringify(cfg)); } catch (e) { /* ignore */ } };
+
+/* ---------- inputs ---------- */
+const keyInputs = [...document.querySelectorAll('[data-key]')];
+function fillInputs() {
+  for (const el of keyInputs) {
+    const k = el.dataset.key;
+    if (el.type === 'checkbox') el.checked = !!cfg[k]; else el.value = cfg[k];
+  }
+  $('#back_thickness').disabled = !cfg.back_panel;
+  renderRows();
+}
+for (const el of keyInputs) {
+  el.addEventListener('input', () => {
+    const k = el.dataset.key;
+    if (el.type === 'checkbox') { cfg[k] = el.checked; $('#back_thickness').disabled = !el.checked; }
+    else { const v = parseFloat(el.value); cfg[k] = Number.isFinite(v) ? v : el.value; }
+    schedule();
+  });
+}
+function renderRows() {
+  const wrap = $('#rows');
+  wrap.innerHTML = '';
+  const n = cfg.rows.length;
+  cfg.rows.forEach((r, i) => {
+    const card = document.createElement('div');
+    card.className = 'row-card';
+    const where = n === 1 ? '' : i === 0 ? 'top' : i === n - 1 ? 'bottom' : '';
+    card.innerHTML = `<div class="row-head"><span>Row ${i + 1}<small>${where}</small></span>
+      <button type="button" class="icon" data-del="${i}" aria-label="Remove row ${i + 1}" ${n === 1 ? 'disabled' : ''}>×</button></div>
+      <div class="row-fields">
+        <label>Drawers<input id="row-${i}-drawers" data-row="${i}" data-f="drawers" type="number" min="1" max="12" step="1"></label>
+        <label>Height<input id="row-${i}-height" data-row="${i}" data-f="height" type="text" placeholder="auto"></label>
+        <label>Widths<input id="row-${i}-widths" data-row="${i}" data-f="widths" type="text" placeholder="auto"></label>
+      </div>`;
+    wrap.appendChild(card);
+    for (const f of ['drawers', 'height', 'widths']) card.querySelector(`#row-${i}-${f}`).value = r[f];
+  });
+}
+$('#rows').addEventListener('input', (e) => {
+  const el = e.target; if (!el.dataset.row) return;
+  const r = cfg.rows[+el.dataset.row];
+  if (el.dataset.f === 'drawers') { const v = parseInt(el.value, 10); r.drawers = Number.isFinite(v) ? Math.min(Math.max(v, 1), 12) : 1; }
+  else r[el.dataset.f] = el.value.trim() === '' ? 'auto' : el.value;
+  schedule();
+});
+$('#rows').addEventListener('click', (e) => {
+  const b = e.target.closest('[data-del]'); if (!b || cfg.rows.length === 1) return;
+  cfg.rows.splice(+b.dataset.del, 1); renderRows(); schedule();
+});
+$('#add-row').addEventListener('click', () => {
+  cfg.rows.push({ drawers: 2, height: 'auto', widths: 'auto' }); renderRows(); schedule();
+});
+$('#reset').addEventListener('click', () => { cfg = clone(DEFAULT); fillInputs(); schedule(); });
+
+/* tabs */
+document.querySelectorAll('[role="tab"]').forEach((t) => t.addEventListener('click', () => {
+  document.querySelectorAll('[role="tab"]').forEach((o) => {
+    o.setAttribute('aria-selected', o === t ? 'true' : 'false');
+    $('#' + o.dataset.panel).hidden = o !== t;
+  });
+}));
+
+/* ---------- three.js scene ---------- */
+const viewer = $('#viewer');
+const renderer = new THREE.WebGLRenderer({ antialias: true });
+renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
+viewer.prepend(renderer.domElement);
+const labelRenderer = new CSS2DRenderer({ element: $('#labels') });
+const scene = new THREE.Scene();
+const camera = new THREE.PerspectiveCamera(35, 1, 1, 20000);
+const controls = new OrbitControls(camera, renderer.domElement);
+controls.enableDamping = true;
+scene.add(new THREE.HemisphereLight(0xffffff, 0x8a8070, 1.6));
+const sun = new THREE.DirectionalLight(0xffffff, 1.6);
+sun.position.set(0.6, 1, 0.9);
+scene.add(sun);
+const fill = new THREE.DirectionalLight(0xffffff, 0.5);
+fill.position.set(-1, 0.3, 0.4);
+scene.add(fill);
+
+const css = (n) => getComputedStyle(document.documentElement).getPropertyValue(n).trim();
+const mat = {
+  carcass: new THREE.MeshStandardMaterial({ roughness: 0.85, polygonOffset: true, polygonOffsetFactor: 1, polygonOffsetUnits: 1 }),
+  back: new THREE.MeshStandardMaterial({ roughness: 0.9, polygonOffset: true, polygonOffsetFactor: 1, polygonOffsetUnits: 1 }),
+  drawer: new THREE.MeshStandardMaterial({ roughness: 0.8, polygonOffset: true, polygonOffsetFactor: 1, polygonOffsetUnits: 1 }),
+  sel: new THREE.MeshStandardMaterial({ roughness: 0.8, polygonOffset: true, polygonOffsetFactor: 1, polygonOffsetUnits: 1 }),
+  hl: new THREE.MeshStandardMaterial({ roughness: 0.6, polygonOffset: true, polygonOffsetFactor: 1, polygonOffsetUnits: 1 }),
+  handle: new THREE.MeshStandardMaterial({ color: 0x3b3f42, roughness: 0.4, metalness: 0.6 }),
+  edge: new THREE.LineBasicMaterial({ transparent: true, opacity: 0.55 }),
+  dim: new THREE.LineBasicMaterial({}),
+};
+function applyTheme() {
+  scene.background = new THREE.Color(css('--scene'));
+  mat.carcass.color.set(css('--ply'));
+  mat.back.color.set(css('--ply-back'));
+  mat.drawer.color.set(css('--ply-drawer'));
+  mat.sel.color.set(css('--ply-drawer'));
+  mat.sel.emissive.set(css('--hl')); mat.sel.emissiveIntensity = 0.25;
+  mat.hl.color.set(css('--hl')); mat.hl.emissive.set(css('--hl')); mat.hl.emissiveIntensity = 0.35;
+  mat.edge.color.set(css('--ply-edge'));
+  mat.dim.color.set(css('--dim'));
+}
+applyTheme();
+matchMedia('(prefers-color-scheme: dark)').addEventListener('change', applyTheme);
+new MutationObserver(applyTheme).observe(document.documentElement, { attributes: true, attributeFilter: ['data-theme'] });
+
+const root = new THREE.Group();
+scene.add(root);
+let drawers = new Map();      // id -> {group, data, open, pos, travel, meshes}
+let pieceMeshes = new Map();  // piece id -> mesh
+let dimGroups = [];
+let lastOuter = '';
+let showDims = true, openAll = false, xray = false, selected = null;
+const reduceMotion = matchMedia('(prefers-reduced-motion: reduce)').matches;
+
+function disposeTree(obj) {
+  obj.traverse((o) => {
+    if (o.geometry) o.geometry.dispose();
+    if (o.isCSS2DObject && o.element.parentNode) o.element.parentNode.removeChild(o.element);
+  });
+}
+
+function label(html, cls = '') {
+  const div = document.createElement('div');
+  div.className = 'dim-label ' + cls;
+  div.innerHTML = html;
+  return new CSS2DObject(div);
+}
+
+function dimLine(parent, a, b, tick, text) {
+  const t = tick.clone().multiplyScalar(12);
+  const g = new THREE.BufferGeometry().setFromPoints([a, b, a.clone().add(t), a.clone().sub(t), b.clone().add(t), b.clone().sub(t)]);
+  parent.add(new THREE.LineSegments(g, mat.dim));
+  const l = label(text);
+  l.position.copy(a.clone().add(b).multiplyScalar(0.5));
+  parent.add(l);
+}
+
+function buildScene(res) {
+  for (const c of [...root.children]) { disposeTree(c); root.remove(c); }
+  const prevOpen = new Set([...drawers.values()].filter((d) => d.open).map((d) => d.data.id));
+  drawers = new Map(); pieceMeshes = new Map(); dimGroups = [];
+  const [W, H, D] = res.summary.outer;
+  const cab = new THREE.Group();
+  cab.position.set(-W / 2, -H / 2, -D / 2);
+  root.add(cab);
+
+  for (const d of res.drawers) {
+    const g = new THREE.Group();
+    const open = openAll || prevOpen.has(d.id);
+    const travel = d.outer[2] * 0.72;
+    const st = { group: g, data: d, open, travel, pos: open ? travel : 0, meshes: [] };
+    g.position.z = st.pos;
+    cab.add(g);
+    drawers.set(d.id, st);
+  }
+  for (const p of res.pieces) {
+    const [x0, y0, z0, x1, y1, z1] = p.box;
+    const geo = new THREE.BoxGeometry(x1 - x0, y1 - y0, z1 - z0);
+    const base = p.drawer ? mat.drawer : p.part === 'Back panel' ? mat.back : mat.carcass;
+    const mesh = new THREE.Mesh(geo, base);
+    mesh.position.set((x0 + x1) / 2, (y0 + y1) / 2, (z0 + z1) / 2);
+    mesh.userData = { pid: p.id, drawer: p.drawer, base };
+    const edges = new THREE.LineSegments(new THREE.EdgesGeometry(geo), mat.edge);
+    mesh.add(edges);
+    (p.drawer ? drawers.get(p.drawer).group : cab).add(mesh);
+    if (p.drawer) drawers.get(p.drawer).meshes.push(mesh);
+    pieceMeshes.set(p.id, mesh);
+  }
+  // handles + drawer labels
+  for (const st of drawers.values()) {
+    const [bx0, by0, , bx1, by1, bz1] = st.data.box;
+    const hw = Math.min(120, (bx1 - bx0) * 0.45), hy = by1 - Math.min(45, (by1 - by0) * 0.25);
+    const handle = new THREE.Mesh(new THREE.BoxGeometry(hw, 12, 14), mat.handle);
+    handle.position.set((bx0 + bx1) / 2, hy, bz1 + 7);
+    handle.userData = { drawer: st.data.id };
+    st.group.add(handle); st.meshes.push(handle);
+    const dg = new THREE.Group();
+    const o = st.data.outer;
+    const l = label(`<b>${o[0]} × ${o[1]}</b><span>${o[2]} deep</span>`, 'drawer');
+    l.position.set((bx0 + bx1) / 2, (by0 + by1) / 2 - 6, bz1 + 1);
+    dg.add(l); st.group.add(dg); dimGroups.push(dg);
+  }
+  // overall dimensions
+  const dg = new THREE.Group();
+  const off = Math.max(40, Math.max(W, H, D) * 0.06);
+  const V = (x, y, z) => new THREE.Vector3(x, y, z);
+  dimLine(dg, V(0, -off, D), V(W, -off, D), V(1, 0, 0).cross(V(0, 0, 1)).normalize(), `${W}`);
+  dimLine(dg, V(-off, 0, D), V(-off, H, D), V(1, 0, 0), `${H}`);
+  dimLine(dg, V(W + off, 0, 0), V(W + off, 0, D), V(1, 0, 0), `${D}`);
+  const rows = res.openings.filter((o) => o.col === 1);
+  for (const o of rows) dimLine(dg, V(W + off * 0.6, o.y0, D), V(W + off * 0.6, o.y1, D), V(1, 0, 0), `${o.height}`);
+  cab.add(dg); dimGroups.push(dg);
+
+  applyToggles();
+  const key = `${W}x${H}x${D}`;
+  if (key !== lastOuter) { lastOuter = key; fitCamera('3d'); }
+  if (selected && !drawers.has(selected)) selectDrawer(null); else if (selected) selectDrawer(selected);
+}
+
+function applyToggles() {
+  for (const g of dimGroups) g.visible = showDims;
+  for (const m of [mat.carcass, mat.back]) {
+    m.transparent = xray; m.opacity = xray ? 0.16 : 1; m.depthWrite = !xray; m.needsUpdate = true;
+  }
+}
+
+function fitCamera(view) {
+  const [W, H, D] = lastOuter.split('x').map(Number);
+  const r = Math.hypot(W, H, D) / 2;
+  const aspect = camera.aspect || 1;
+  const vfov = camera.fov * Math.PI / 180;
+  const hfov = 2 * Math.atan(Math.tan(vfov / 2) * aspect);
+  const dist = (r * 1.25) / Math.sin(Math.min(vfov, hfov) / 2);
+  const dir = view === 'front' ? new THREE.Vector3(0, 0, 1) : new THREE.Vector3(0.62, 0.38, 1).normalize();
+  camera.position.copy(dir.multiplyScalar(dist));
+  camera.near = dist / 50; camera.far = dist * 20; camera.updateProjectionMatrix();
+  controls.target.set(0, 0, 0); controls.update();
+}
+
+function resize() {
+  const w = viewer.clientWidth, h = viewer.clientHeight;
+  renderer.setSize(w, h); labelRenderer.setSize(w, h);
+  camera.aspect = w / h; camera.updateProjectionMatrix();
+}
+new ResizeObserver(resize).observe(viewer);
+resize();
+
+/* picking */
+const ray = new THREE.Raycaster();
+const ptr = new THREE.Vector2();
+let downAt = null;
+function pick(ev) {
+  const r = renderer.domElement.getBoundingClientRect();
+  ptr.set(((ev.clientX - r.left) / r.width) * 2 - 1, -((ev.clientY - r.top) / r.height) * 2 + 1);
+  ray.setFromCamera(ptr, camera);
+  const targets = [];
+  root.traverse((o) => { if (o.isMesh && (o.userData.drawer || !xray)) targets.push(o); });
+  const hit = ray.intersectObjects(targets, false)[0];
+  return hit && hit.object.userData.drawer ? hit.object.userData.drawer : null;
+}
+renderer.domElement.addEventListener('pointerdown', (e) => { downAt = [e.clientX, e.clientY]; });
+renderer.domElement.addEventListener('pointerup', (e) => {
+  if (!downAt || Math.hypot(e.clientX - downAt[0], e.clientY - downAt[1]) > 6) return;
+  const id = pick(e);
+  if (!id) { selectDrawer(null); return; }
+  const st = drawers.get(id);
+  st.open = !st.open;
+  selectDrawer(st.open ? id : (selected === id ? null : selected));
+});
+renderer.domElement.addEventListener('pointermove', (e) => {
+  if (e.buttons) return;
+  renderer.domElement.style.cursor = pick(e) ? 'pointer' : 'grab';
+});
+
+function selectDrawer(id) {
+  selected = id;
+  for (const st of drawers.values()) for (const m of st.meshes) if (m.userData.pid !== undefined) m.material = st.data.id === id ? mat.sel : m.userData.base;
+  const info = $('#info');
+  document.querySelectorAll('#drawer-table tbody tr').forEach((tr) => tr.classList.toggle('sel', tr.dataset.id === id));
+  if (!id || !lastRes) { info.hidden = true; return; }
+  const d = drawers.get(id).data;
+  const marks = [...new Set(lastRes.pieces.filter((p) => p.drawer === id).map((p) => `${p.mark} ${p.part.replace('Drawer ', '')}`))];
+  info.innerHTML = `<h3>Drawer ${id}</h3><dl>
+    <dt>Opening</dt><dd>${d.opening[0]} × ${d.opening[1]}</dd>
+    <dt>Box</dt><dd>${d.outer[0]} × ${d.outer[1]} × ${d.outer[2]}</dd>
+    <dt>Inside</dt><dd>${d.inner[0]} × ${d.inner[1]} × ${d.inner[2]}</dd>
+    <dt>Pieces</dt><dd>${marks.join(', ')}</dd></dl>`;
+  info.hidden = false;
+}
+
+function highlightPieces(ids) {
+  const set = new Set(ids || []);
+  for (const [pid, m] of pieceMeshes) {
+    const st = m.userData.drawer ? drawers.get(m.userData.drawer) : null;
+    const normal = st && st.data.id === selected ? mat.sel : m.userData.base;
+    m.material = set.has(pid) ? mat.hl : normal;
+  }
+  // pull out drawers whose pieces are highlighted, so they are visible
+  for (const st of drawers.values()) st.peek = st.meshes.some((m) => set.has(m.userData.pid));
+}
+
+function tick() {
+  controls.update();
+  for (const st of drawers.values()) {
+    const target = (st.open || openAll || st.peek) ? st.travel : 0;
+    st.pos = reduceMotion ? target : st.pos + (target - st.pos) * 0.14;
+    if (Math.abs(target - st.pos) < 0.2) st.pos = target;
+    st.group.position.z = st.pos;
+  }
+  renderer.render(scene, camera);
+  labelRenderer.render(scene, camera);
+  requestAnimationFrame(tick);
+}
+requestAnimationFrame(tick);
+
+/* toolbar */
+function toggleBtn(id, get, set) {
+  const b = $(id);
+  b.addEventListener('click', () => { set(!get()); b.setAttribute('aria-pressed', get() ? 'true' : 'false'); });
+}
+toggleBtn('#t-dims', () => showDims, (v) => { showDims = v; applyToggles(); });
+toggleBtn('#t-open', () => openAll, (v) => { openAll = v; if (!v) for (const st of drawers.values()) st.open = false; });
+toggleBtn('#t-xray', () => xray, (v) => { xray = v; applyToggles(); });
+$('#v-front').addEventListener('click', () => fitCamera('front'));
+$('#v-3d').addEventListener('click', () => fitCamera('3d'));
+
+/* ---------- tables ---------- */
+let lastRes = null;
+const esc = (s) => String(s).replace(/[&<>"]/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]));
+
+function renderTables(res) {
+  const cut = $('#cut-table');
+  cut.innerHTML = `<thead><tr><th>Mark</th><th>Part</th><th class="n">Qty</th><th class="n">Length</th><th class="n">Width</th><th class="n">Thick</th><th>Where</th></tr></thead><tbody>` +
+    res.cutlist.map((g, i) => `<tr data-i="${i}"><td><span class="mark">${g.mark}</span></td><td>${esc(g.part)}</td><td class="n">${g.qty}</td>
+      <td class="n">${g.length}</td><td class="n">${g.width}</td><td class="n">${g.thickness}</td>
+      <td><div class="where">${esc(g.where.join(', '))}</div>${g.notes.map((n) => `<div class="note">${esc(n)}</div>`).join('')}</td></tr>`).join('') + '</tbody>';
+  cut.querySelectorAll('tbody tr').forEach((tr) => {
+    tr.addEventListener('mouseenter', () => highlightPieces(res.cutlist[+tr.dataset.i].piece_ids));
+    tr.addEventListener('mouseleave', () => highlightPieces(null));
+  });
+
+  const dt = $('#drawer-table');
+  dt.innerHTML = `<thead><tr><th>Drawer</th><th class="n">Opening w × h</th><th class="n">Box w × h × d</th><th class="n">Inside w × h × d</th></tr></thead><tbody>` +
+    res.drawers.map((d) => `<tr data-id="${d.id}" style="cursor:pointer"><td>${d.id}</td><td class="n">${d.opening.join(' × ')}</td><td class="n">${d.outer.join(' × ')}</td><td class="n">${d.inner.join(' × ')}</td></tr>`).join('') + '</tbody>';
+  dt.querySelectorAll('tbody tr').forEach((tr) => tr.addEventListener('click', () => {
+    const st = drawers.get(tr.dataset.id); if (!st) return;
+    st.open = true; selectDrawer(tr.dataset.id);
+  }));
+
+  const sh = $('#sheets');
+  sh.innerHTML = res.sheets.map((s, i) => {
+    const parts = s.parts.map(([x, y, L, Wd, mark]) => {
+      const fs = Math.max(26, Math.min(90, Math.min(L, Wd) * 0.4));
+      return `<rect class="s-part" x="${x}" y="${y}" width="${L}" height="${Wd}"></rect>` +
+        (Math.min(L, Wd) > 40 ? `<text class="s-txt" x="${x + L / 2}" y="${y + Wd / 2}" font-size="${fs}">${mark}</text>` : '');
+    }).join('');
+    return `<div class="sheet"><h4>Sheet ${i + 1} · ${s.thickness} mm · ${s.fill}% used</h4>
+      <svg viewBox="-10 -10 ${s.length + 20} ${s.width + 20}" role="img" aria-label="Sheet ${i + 1} layout"><rect class="s-bg" x="0" y="0" width="${s.length}" height="${s.width}"></rect>${parts}</svg></div>`;
+  }).join('');
+}
+
+function renderSummary(res) {
+  const s = res.summary;
+  const byT = {};
+  for (const sh of res.sheets) byT[sh.thickness] = (byT[sh.thickness] || 0) + 1;
+  const sheetTxt = Object.entries(byT).sort((a, b) => b[0] - a[0]).map(([t, n]) => `${n} × ${t} mm`).join(', ');
+  $('#summary').innerHTML = `<span>Outer <b>${s.outer.join(' × ')}</b></span>
+    <span>Inner width <b>${s.inner_width}</b></span>
+    <span>Row heights <b>${s.row_heights.join(' / ')}</b></span>
+    <span><b>${s.drawer_count}</b> drawers · <b>${s.piece_count}</b> pieces</span>
+    <span>Plywood <b>${s.area_m2.toFixed(2)} m²</b></span>
+    <span>Sheets ≈ <b>${sheetTxt || '–'}</b></span>`;
+}
+
+function showMessages(res) {
+  $('#msgs').innerHTML = (res.errors || []).map((e) => `<div class="msg err">${esc(e)}</div>`).join('') +
+    (res.warnings || []).map((w) => `<div class="msg warn">${esc(w)}</div>`).join('');
+}
+
+/* CSV */
+function csv() {
+  if (!lastRes) return '';
+  const q = (v) => /[",\n]/.test(String(v)) ? `"${String(v).replace(/"/g, '""')}"` : String(v);
+  const lines = [['Mark', 'Part', 'Qty', 'Length', 'Width', 'Thickness', 'Where', 'Notes'].join(',')];
+  for (const g of lastRes.cutlist) lines.push([g.mark, g.part, g.qty, g.length, g.width, g.thickness, g.where.join('; '), g.notes.join('; ')].map(q).join(','));
+  return lines.join('\n');
+}
+$('#copy-csv').addEventListener('click', async () => {
+  const text = csv();
+  try { await navigator.clipboard.writeText(text); $('#copy-state').textContent = 'Copied. Paste into a spreadsheet.'; }
+  catch (e) {
+    const ta = document.createElement('textarea'); ta.value = text; document.body.appendChild(ta); ta.select();
+    let ok = false; try { ok = document.execCommand('copy'); } catch (e2) { /* ignore */ }
+    ta.remove(); $('#copy-state').textContent = ok ? 'Copied.' : 'Copy was blocked by the browser.';
+  }
+});
+let standalone = false;
+try { standalone = window.top === window.self; } catch (e) { standalone = false; }
+if (standalone) {
+  $('#dl-csv').hidden = false;
+  $('#dl-csv').addEventListener('click', () => {
+    const a = document.createElement('a');
+    a.href = URL.createObjectURL(new Blob([csv()], { type: 'text/csv' }));
+    a.download = 'cabinet-cutlist.csv'; a.click();
+    setTimeout(() => URL.revokeObjectURL(a.href), 1000);
+  });
+}
+
+/* ---------- run ---------- */
+let timer = null;
+function schedule() { clearTimeout(timer); timer = setTimeout(run, 120); save(); }
+function run() {
+  if (!window.cabinet_compute) return;
+  let res;
+  try { res = JSON.parse(window.cabinet_compute(JSON.stringify(cfg))); }
+  catch (e) { res = { ok: false, errors: ['Could not run the Python engine: ' + e], warnings: [] }; }
+  showMessages(res);
+  viewer.classList.toggle('stale', !res.ok);
+  if (!res.ok) return;
+  lastRes = res;
+  buildScene(res);
+  renderTables(res);
+  renderSummary(res);
+}
+fillInputs();
+function start() { $('#status').hidden = true; run(); }
+window.__appStart = start;
+if (window.__pyReady) start();
+setTimeout(() => {
+  if (!window.__pyReady) $('#status').textContent = 'The Python runtime (Brython) did not load. Check your internet connection and reload.';
+}, 20000);
+</script>
+</body>
+</html>
