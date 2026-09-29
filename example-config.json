@@ -11,6 +11,8 @@
   "sheet_length": 2440,
   "sheet_width": 1220,
   "kerf": 3,
+  "nail_spacing": 100,
+  "stock": [],
   "rows": [
     {
       "drawers": 2,

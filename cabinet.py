@@ -17,11 +17,18 @@ Carcass
   * Optional back panel is screwed on the back and covers the full width x height;
     the carcass depth is then depth - back thickness, so the outer depth is kept.
 
-Drawers (plain boxes, front flush with the cabinet front)
+Drawers (plain boxes, front flush with the cabinet front), built like the carcass
   * Drawer box = opening minus `clearance` on every side (left, right, top, bottom)
     and minus `clearance` at the back.
-  * Bottom panel runs under the whole box footprint.
-  * The drawer sides run the full drawer depth; front and back fit between the sides.
+  * The drawer sides run the full drawer height and depth.
+  * The bottom fits between the sides (full depth); front and back fit between the
+    sides and stand on the bottom.
+
+Materials
+  * Plywood you already have (`stock`) is filled first; the rest goes on new sheets
+    of sheet_length x sheet_width, which are what you still need to buy.
+  * Nails: every joint is glued and nailed through the face of one panel into the
+    edge of the other, one nail every `nail_spacing` mm (at least 2 per joint).
 """
 
 try:
@@ -38,6 +45,8 @@ DEFAULT_CONFIG = {
     "back_panel": True, "back_thickness": 18,
     "clearance": 2, "sink": 6,
     "sheet_length": 2440, "sheet_width": 1220, "kerf": 3,
+    "nail_spacing": 100,
+    "stock": [],   # e.g. [{"thickness": 12, "length": 1220, "width": 1220, "count": 1}]
     "rows": [
         {"drawers": 2, "height": "auto", "widths": "auto"},
         {"drawers": 3, "height": "auto", "widths": "auto"},
@@ -46,7 +55,7 @@ DEFAULT_CONFIG = {
 }
 
 PART_ORDER = ["Side", "Top", "Bottom", "Shelf", "Divider", "Back panel",
-              "Drawer side", "Drawer front", "Drawer back", "Drawer bottom"]
+              "Drawer side", "Drawer bottom", "Drawer front", "Drawer back"]
 
 
 class CabinetError(Exception):
@@ -138,6 +147,8 @@ def compute(cfg):
     sheet_l = num(cfg, "sheet_length", allow_zero=False)
     sheet_w = num(cfg, "sheet_width", allow_zero=False)
     kerf = num(cfg, "kerf", minimum=0)
+    nail_spacing = num(cfg, "nail_spacing", allow_zero=False)
+    stock = parse_stock(cfg.get("stock") or [])
     rows_cfg = cfg.get("rows") or []
     if len(rows_cfg) == 0:
         raise CabinetError("Add at least one row.")
@@ -145,9 +156,6 @@ def compute(cfg):
     warnings = []
     if s >= t:
         raise CabinetError("Column sink (%s mm) must be less than the plywood thickness (%s mm)." % (r1(s), r1(t)))
-    if s > t / 2:
-        warnings.append("Column sink of %s mm is more than half the plywood thickness; "
-                        "dados from both sides of a shelf can weaken it." % r1(s))
 
     Dc = D - tb          # carcass depth (sides, top, bottom, shelves, dividers)
     z0 = tb              # carcass starts in front of the back panel
@@ -253,15 +261,17 @@ def compute(cfg):
                     raise CabinetError("The %s gets dados on both faces at %s mm; with %s mm sink "
                                        "they cut through. Reduce the sink or shift a column."
                                        % (p["part"].lower(), u["from"], r1(s)))
-                if u["from"] < v["to"] and v["from"] < u["to"]:
-                    warnings.append("The %s (%s) has dados on both faces at %s mm: %s mm of wood remains there."
-                                    % (p["part"].lower(), p["label"], u["from"], r1(t - 2 * s)))
+                if u["from"] < v["to"] and v["from"] < u["to"] and t - 2 * s < t / 2:
+                    warnings.append("The %s (%s) has dados on both faces at %s mm: only %s of %s mm of wood "
+                                    "remains there, less than half the board." % (p["part"].lower(), p["label"], u["from"],
+                                                                                 r1(t - 2 * s), r1(t)))
 
     if has_back:
         add("Back panel", "back", H, W, tb, box(0, 0, 0, W, H, tb))
 
     cutlist = build_cutlist(pieces)
-    sheets = pack_sheets(pieces, cutlist, sheet_l, sheet_w, kerf, warnings)
+    sheets, shopping = pack_sheets(pieces, stock, sheet_l, sheet_w, kerf, warnings)
+    nails = count_nails(W, H, Dc, t, tb, heights, counts, drawers, td, nail_spacing)
 
     area = 0.0
     for p in pieces:
@@ -273,10 +283,12 @@ def compute(cfg):
         "piece_count": len(pieces), "drawer_count": len(drawers),
         "area_m2": round(area / 1e6 * 100) / 100,
         "sheet_count": len(sheets),
+        "buy": shopping,
+        "nail_total": nails["total"],
     }
     return {"ok": True, "errors": [], "warnings": warnings, "summary": summary,
             "openings": openings, "drawers": drawers, "pieces": pieces,
-            "cutlist": cutlist, "sheets": sheets}
+            "cutlist": cutlist, "sheets": sheets, "nails": nails}
 
 
 def make_drawer(add, did, x, y, w, h, D, Dc, c, td):
@@ -290,10 +302,9 @@ def make_drawer(add, did, x, y, w, h, D, Dc, c, td):
     by0 = y + c
     bz0 = D - dd
     tag = "drawer " + did
-    add("Drawer bottom", tag, dw, dd, td, box(bx0, by0, bz0, bx0 + dw, by0 + td, D), drawer=did)
-    add("Drawer side", tag + " left", dd, dh - td, td, box(bx0, by0 + td, bz0, bx0 + td, by0 + dh, D), drawer=did)
-    add("Drawer side", tag + " right", dd, dh - td, td,
-        box(bx0 + dw - td, by0 + td, bz0, bx0 + dw, by0 + dh, D), drawer=did)
+    add("Drawer side", tag + " left", dd, dh, td, box(bx0, by0, bz0, bx0 + td, by0 + dh, D), drawer=did)
+    add("Drawer side", tag + " right", dd, dh, td, box(bx0 + dw - td, by0, bz0, bx0 + dw, by0 + dh, D), drawer=did)
+    add("Drawer bottom", tag, dw - 2 * td, dd, td, box(bx0 + td, by0, bz0, bx0 + dw - td, by0 + td, D), drawer=did)
     add("Drawer front", tag, dw - 2 * td, dh - td, td,
         box(bx0 + td, by0 + td, D - td, bx0 + dw - td, by0 + dh, D), drawer=did)
     add("Drawer back", tag, dw - 2 * td, dh - td, td,
@@ -348,56 +359,199 @@ def build_cutlist(pieces):
     return out
 
 
-def pack_sheets(pieces, cutlist, SL, SW, kerf, warnings):
-    """Simple shelf packing per thickness; grain (long side) along the sheet length.
-    Gives a realistic estimate, not an optimal nesting."""
+def ceil_div(a, b):
+    return int(-(-a // b))
+
+
+def parse_stock(rows):
+    """Plywood you already own: list of {thickness, length, width, count}."""
+    out = []
+    for i in range(len(rows)):
+        row = rows[i]
+        vals = []
+        for key in ("thickness", "length", "width", "count"):
+            raw = row.get(key, 1 if key == "count" else None)
+            if raw is None or str(raw).strip() == "":
+                raise CabinetError("Plywood in stock, line %d: fill in the %s." % (i + 1, key))
+            try:
+                vals.append(float(raw))
+            except (TypeError, ValueError):
+                raise CabinetError("Plywood in stock, line %d: %s must be a number." % (i + 1, key))
+        T, L, Wd, n = vals
+        if T <= 0 or L <= 0 or Wd <= 0 or n < 0:
+            raise CabinetError("Plywood in stock, line %d: sizes must be larger than 0." % (i + 1))
+        if Wd > L:
+            L, Wd = Wd, L
+        for k in range(int(n)):
+            out.append({"thickness": r1(T), "length": r1(L), "width": r1(Wd), "line": i + 1})
+    return out
+
+
+def _new_bin(L, Wd, T, source, line=None):
+    return {"length": L, "width": Wd, "thickness": T, "source": source, "line": line,
+            "free": [[0.0, 0.0, L, Wd]], "parts": []}
+
+
+def _fits(bn, l, w):
+    return (l <= bn["length"] and w <= bn["width"]) or (w <= bn["length"] and l <= bn["width"])
+
+
+def _place(bn, l, w, p, kerf):
+    """Guillotine packing: put the piece in the free rectangle it fits most snugly
+    (long side along the sheet length preferred), then split the leftover in two."""
+    options = [(l, w, 0)] if l == w else [(l, w, 0), (w, l, 1)]
+    best = None
+    for pl, pw, rot in options:
+        for i in range(len(bn["free"])):
+            fx, fy, fw, fh = bn["free"][i]
+            if pl <= fw and pw <= fh:
+                score = (min(fw - pl, fh - pw), rot)
+                if best is None or score < best[0]:
+                    best = (score, i, pl, pw)
+    if best is None:
+        return False
+    score, i, pl, pw = best
+    fx, fy, fw, fh = bn["free"].pop(i)
+    bn["parts"].append([r1(fx), r1(fy), pl, pw, p["mark"], p["id"]])
+    rw = fw - pl - kerf   # leftover to the right
+    bh = fh - pw - kerf   # leftover below
+    if rw < bh:           # split so the larger leftover stays in one piece
+        new = [[fx + pl + kerf, fy, rw, pw], [fx, fy + pw + kerf, fw, bh]]
+    else:
+        new = [[fx + pl + kerf, fy, rw, fh], [fx, fy + pw + kerf, pl, bh]]
+    for r in new:
+        if r[2] > 1 and r[3] > 1:
+            bn["free"].append(r)
+    return True
+
+
+def pack_sheets(pieces, stock, SL, SW, kerf, warnings):
+    """Fill your own plywood first, then new sheets (to buy). Guillotine packing per thickness:
+    a realistic estimate, not an optimal nesting."""
     by_t = {}
     for p in pieces:
         by_t.setdefault(p["thickness"], []).append(p)
+    thicknesses = list(by_t.keys())
+    for st in stock:
+        if st["thickness"] not in thicknesses:
+            thicknesses.append(st["thickness"])
     sheets = []
-    for T in sorted(by_t.keys(), reverse=True):
-        items = []
-        for p in by_t[T]:
+    shopping = []
+    for T in sorted(thicknesses, reverse=True):
+        own = [st for st in stock if st["thickness"] == T]
+        own.sort(key=lambda st: st["length"] * st["width"])
+        items = sorted(by_t.get(T, []), key=lambda p: (-p["length"] * p["width"], -p["length"]))
+        bins = []
+        for p in items:
             L, Wd = p["length"], p["width"]
-            if L > SL or Wd > SW:
-                if L <= SW and Wd <= SL:   # fits rotated (grain across)
-                    L, Wd = Wd, L
-                else:
-                    warnings.append("%s (%s, %s x %s mm) does not fit on a %s x %s sheet."
-                                    % (p["part"], p["label"], p["length"], p["width"], r1(SL), r1(SW)))
-                    continue
-            items.append((Wd, L, p))
-        items.sort(key=lambda it: (-it[0], -it[1]))
-        tsheets = []   # each: {"shelves": [[y, height, used_x]], "used_y": .., "parts": []}
-        for Wd, L, p in items:
             placed = False
-            for sh in tsheets:
-                for shelf in sh["shelves"]:
-                    if Wd <= shelf[1] and shelf[2] + L <= SL:
-                        sh["parts"].append([r1(shelf[2]), r1(shelf[0]), L, Wd, p["mark"], p["id"]])
-                        shelf[2] += L + kerf
-                        placed = True
-                        break
-                if placed:
-                    break
-                if sh["used_y"] + Wd <= SW:
-                    y = sh["used_y"]
-                    sh["shelves"].append([y, Wd, L + kerf])
-                    sh["used_y"] = y + Wd + kerf
-                    sh["parts"].append([0, r1(y), L, Wd, p["mark"], p["id"]])
+            for bn in bins:          # stock bins are opened first, so they fill first
+                if _place(bn, L, Wd, p, kerf):
                     placed = True
                     break
-            if not placed:
-                sh = {"shelves": [[0, Wd, L + kerf]], "used_y": Wd + kerf,
-                      "parts": [[0, 0, L, Wd, p["mark"], p["id"]]]}
-                tsheets.append(sh)
-        for sh in tsheets:
+            if placed:
+                continue
+            for k in range(len(own)):
+                st = own[k]
+                if _fits(st, L, Wd):
+                    bn = _new_bin(st["length"], st["width"], T, "stock", st["line"])
+                    own.pop(k)
+                    _place(bn, L, Wd, p, kerf)
+                    bins.append(bn)
+                    placed = True
+                    break
+            if placed:
+                continue
+            bn = _new_bin(SL, SW, T, "buy")
+            if _fits(bn, L, Wd):
+                _place(bn, L, Wd, p, kerf)
+                bins.append(bn)
+            else:
+                warnings.append("%s (%s, %s x %s mm) does not fit on a %s x %s sheet."
+                                % (p["part"], p["label"], L, Wd, r1(SL), r1(SW)))
+        bins.sort(key=lambda bn: 0 if bn["source"] == "stock" else 1)
+        n_stock = len([st for st in stock if st["thickness"] == T])
+        n_used = len([bn for bn in bins if bn["source"] == "stock"])
+        n_buy = len(bins) - n_used
+        shopping.append({"thickness": T, "buy": n_buy, "stock_used": n_used, "stock_total": n_stock,
+                         "needed": len(by_t.get(T, [])) > 0})
+        for bn in bins:
             used = 0.0
-            for q in sh["parts"]:
+            for q in bn["parts"]:
                 used += q[2] * q[3]
-            sheets.append({"thickness": T, "length": r1(SL), "width": r1(SW),
-                           "parts": sh["parts"], "fill": round(used / (SL * SW) * 100)})
-    return sheets
+            sheets.append({"thickness": T, "length": bn["length"], "width": bn["width"],
+                           "source": bn["source"], "line": bn["line"], "parts": bn["parts"],
+                           "fill": round(used / (bn["length"] * bn["width"]) * 100)})
+    return sheets, shopping
+
+
+NAIL_SIZES = [20, 25, 30, 35, 40, 45, 50, 55, 60, 65, 70, 80, 90, 100]
+
+
+def nail_length(through):
+    """Through the panel plus about 1.5x that (min 20 mm) into the edge of the other panel."""
+    want = through + max(20.0, 1.5 * through)
+    for size in NAIL_SIZES:
+        if size >= want:
+            return size
+    return NAIL_SIZES[-1]
+
+
+def count_nails(W, H, Dc, t, tb, heights, counts, drawers, td, spacing):
+    """Glue + nails every `spacing` mm along each joint, starting 25 mm from the ends."""
+    def per_joint(L):
+        return max(2, ceil_div(L - 50, spacing) + 1)
+
+    groups = []
+
+    def add(joint, n_joints, L, through):
+        if n_joints <= 0:
+            return
+        groups.append({"joint": joint, "joints": n_joints, "joint_length": r1(L),
+                       "nails": n_joints * per_joint(L), "through": r1(through),
+                       "nail_length": nail_length(through)})
+
+    R = len(heights)
+    n_div = sum(n - 1 for n in counts)
+    add("Sides into top and bottom", 4, Dc, t)
+    add("Sides into shelves", 2 * (R - 1), Dc, t)
+    divider_nails = 0
+    for i in range(R):
+        divider_nails += 2 * (counts[i] - 1) * per_joint(Dc)
+    if n_div:
+        groups.append({"joint": "Top, bottom and shelves into dividers", "joints": 2 * n_div,
+                       "joint_length": r1(Dc), "nails": divider_nails, "through": r1(t),
+                       "nail_length": nail_length(t)})
+    if tb > 0:
+        add("Back panel into sides", 2, H, tb)
+        add("Back panel into top and bottom", 2, W - 2 * t, tb)
+        add("Back panel into shelves", R - 1, W - 2 * t, tb)
+        for i in range(R):
+            add("Back panel into dividers, row %d" % (i + 1), counts[i] - 1, heights[i], tb)
+    # drawers: sides into front/back and bottom, bottom into front/back
+    side_fb = side_bottom = bottom_fb = 0
+    for d in drawers:
+        dw, dh, dd = d["outer"]
+        side_fb += 4 * per_joint(dh - td)
+        side_bottom += 2 * per_joint(dd)
+        bottom_fb += 2 * per_joint(dw - 2 * td)
+    nd = len(drawers)
+    for joint, k, n in (("Drawer sides into front and back", 4 * nd, side_fb),
+                        ("Drawer sides into bottom", 2 * nd, side_bottom),
+                        ("Drawer bottom into front and back", 2 * nd, bottom_fb)):
+        if nd:
+            groups.append({"joint": joint, "joints": k, "joint_length": None, "nails": n,
+                           "through": r1(td), "nail_length": nail_length(td)})
+    by_len = {}
+    for g in groups:
+        by_len[g["nail_length"]] = by_len.get(g["nail_length"], 0) + g["nails"]
+    lengths = []
+    total = 0
+    for L in sorted(by_len.keys()):
+        n = by_len[L]
+        total += n
+        lengths.append({"length": L, "count": n, "with_spare": ceil_div(n * 11, 10)})
+    return {"spacing": r1(spacing), "groups": groups, "by_length": lengths, "total": total}
 
 
 # --- serialisation (no json module needed, so Brython runs without its stdlib) --
@@ -461,7 +615,12 @@ def print_cutlist(res):
         print("Drawer %-5s opening %s x %s | box %s x %s x %s | inside %s x %s x %s" %
               tuple([d["id"]] + d["opening"] + d["outer"] + d["inner"]))
     s = res["summary"]
-    print("\n%d pieces, %.2f m2 plywood, about %d sheet(s)." % (s["piece_count"], s["area_m2"], s["sheet_count"]))
+    print("\n%d pieces, %.2f m2 plywood." % (s["piece_count"], s["area_m2"]))
+    for b in s["buy"]:
+        print("%s mm: buy %d new sheet(s), using %d of %d stock piece(s)." % (b["thickness"], b["buy"],
+                                                                          b["stock_used"], b["stock_total"]))
+    for n in res["nails"]["by_length"]:
+        print("Nails %d mm: %d (+10%% spare: %d)" % (n["length"], n["count"], n["with_spare"]))
     for w in res["warnings"]:
         print("Warning:", w)
 
