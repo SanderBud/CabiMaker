@@ -64,6 +64,10 @@ input.bad { border-color: var(--err); }
 .row-fields label { display: flex; flex-direction: column; gap: 2px; font-size: 11.5px; color: var(--muted); min-width: 0; }
 .row-fields input { background: var(--panel); }
 .row-tools { display: flex; gap: 6px; }
+.row-tools.wrap { flex-wrap: wrap; }
+.filebtn { font: 600 13.5px var(--f-body); border-radius: 4px; border: 1px solid var(--line); background: var(--panel); color: var(--ink); padding: 6px 10px; cursor: pointer; }
+.filebtn:hover { border-color: var(--accent); }
+#settings-text { width: 100%; font: 12px/1.4 var(--f-mono); color: var(--ink); background: var(--bg); border: 1px solid var(--line); border-radius: 4px; padding: 6px 8px; resize: vertical; }
 button { font: 600 13.5px var(--f-body); border-radius: 4px; border: 1px solid var(--line); background: var(--panel); color: var(--ink); padding: 6px 10px; cursor: pointer; }
 button:hover { border-color: var(--accent); }
 button.primary { background: var(--accent); color: var(--accent-ink); border-color: var(--accent); }
@@ -130,7 +134,7 @@ h3.sub { font: 700 17px var(--f-display); margin: 18px 0 6px; }
 .msg > span { flex: 1; }
 .msg .x { background: none; border: none; color: inherit; font-size: 18px; line-height: 1; padding: 0 2px; opacity: .7; }
 .msg .x:hover { opacity: 1; }
-.stock-fields { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)) auto; gap: 6px; align-items: end; }
+.stock-fields { display: grid; grid-template-columns: minmax(0, .8fr) minmax(0, 1.15fr) minmax(0, 1.15fr) minmax(0, .7fr) auto; gap: 6px; align-items: end; }
 .stock-fields label { display: flex; flex-direction: column; gap: 2px; font-size: 11.5px; color: var(--muted); min-width: 0; }
 .stock-fields input { background: var(--panel); }
 button.sw::before { content: ""; display: inline-block; width: 8px; height: 8px; border-radius: 50%; margin-right: 7px; border: 1.5px solid var(--muted); vertical-align: 1px; }
@@ -152,6 +156,25 @@ kbd { font: 12px var(--f-mono); border: 1px solid var(--line); border-radius: 3p
   </header>
 
   <aside>
+    <section class="box">
+      <h2>Settings</h2>
+      <div class="row-tools wrap">
+        <button type="button" id="copy-settings">Copy settings</button>
+        <button type="button" id="paste-settings">Paste settings</button>
+        <button type="button" id="save-settings" hidden>Save to file</button>
+        <label class="filebtn" for="open-settings">Open file</label>
+        <input id="open-settings" type="file" accept=".json,.txt,application/json,text/plain" hidden>
+      </div>
+      <div id="paste-box" class="msgs" hidden>
+        <textarea id="settings-text" rows="5" spellcheck="false" placeholder="Paste copied settings here"></textarea>
+        <div class="row-tools">
+          <button type="button" class="primary" id="apply-settings">Load these settings</button>
+          <button type="button" id="cancel-settings">Cancel</button>
+        </div>
+      </div>
+      <p class="hint" id="settings-state">Copy your settings to keep them in a note or file, and paste them back later. This browser also remembers your last settings.</p>
+    </section>
+
     <section class="box">
       <h2>Outer dimensions</h2>
       <div class="grid3">
@@ -1313,6 +1336,7 @@ function renderTables(res) {
   $('#nail-hint').textContent = `Glue plus one nail every ${res.nails.spacing} mm along each joint, starting about 25 mm from the ends, at least 2 per joint. Nails go through the face of one panel into the edge of the other; length is roughly the panel thickness plus 1.5× that into the edge. Pre-drilling near the ends helps avoid splitting.`;
 
   const sh = $('#sheets');
+  const maxL = Math.max(...res.sheets.map((s) => s.length), 1);   // one scale for every sheet
   sh.innerHTML = res.sheets.map((s, i) => {
     const parts = s.parts.map(([x, y, L, Wd, mark]) => {
       const fs = Math.max(26, Math.min(90, Math.min(L, Wd) * 0.4));
@@ -1321,7 +1345,7 @@ function renderTables(res) {
     }).join('');
     const src = s.source === 'stock' ? `<span class="src stock">your stock</span>` : `<span class="src to-buy">buy</span>`;
     return `<div class="sheet"><h4>${s.thickness} mm · ${s.length} × ${s.width}${src} <span class="where">${s.fill}% used</span></h4>
-      <svg viewBox="-10 -10 ${s.length + 20} ${s.width + 20}" role="img" aria-label="Sheet ${i + 1} layout"><rect class="s-bg" x="0" y="0" width="${s.length}" height="${s.width}"></rect>${parts}</svg></div>`;
+      <svg style="width:${((s.length + 20) / (maxL + 20) * 100).toFixed(2)}%" viewBox="-10 -10 ${s.length + 20} ${s.width + 20}" role="img" aria-label="Sheet ${i + 1} layout"><rect class="s-bg" x="0" y="0" width="${s.length}" height="${s.width}"></rect>${parts}</svg></div>`;
   }).join('');
 }
 const cfgNum = (k) => cfg[k];
@@ -1380,6 +1404,52 @@ if (standalone) {
     const a = document.createElement('a');
     a.href = URL.createObjectURL(new Blob([csv()], { type: 'text/csv' }));
     a.download = 'cabinet-cutlist.csv'; a.click();
+    setTimeout(() => URL.revokeObjectURL(a.href), 1000);
+  });
+}
+
+/* ---------- settings: copy / paste / file ---------- */
+const settingsText = () => JSON.stringify({ cabinet_builder: 1, ...cfg });
+const setState = (t) => { $('#settings-state').textContent = t; };
+function loadSettings(text) {
+  let obj;
+  try { obj = JSON.parse(text.trim()); } catch (e) { setState('That text is not valid settings. Copy the whole text again, including the { and }.'); return false; }
+  if (!obj || typeof obj !== 'object' || !Array.isArray(obj.rows)) { setState('These settings have no rows. Copy them again from Cabinet Builder.'); return false; }
+  delete obj.cabinet_builder;
+  cfg = Object.assign(clone(DEFAULT), obj);
+  if (!Array.isArray(cfg.stock)) cfg.stock = [];
+  fillInputs(); schedule();
+  setState('Settings loaded.');
+  return true;
+}
+$('#copy-settings').addEventListener('click', async () => {
+  const text = settingsText();
+  try { await navigator.clipboard.writeText(text); setState('Settings copied. Paste them in a note or file to keep them.'); }
+  catch (e) {
+    $('#paste-box').hidden = false;
+    $('#settings-text').value = text; $('#settings-text').select();
+    setState('Copying was blocked. The settings are selected above: press Ctrl+C to copy them.');
+  }
+});
+$('#paste-settings').addEventListener('click', () => {
+  $('#paste-box').hidden = false; $('#settings-text').value = ''; $('#settings-text').focus();
+  setState('Paste your settings in the box (Ctrl+V), then load them.');
+});
+$('#apply-settings').addEventListener('click', () => { if (loadSettings($('#settings-text').value)) $('#paste-box').hidden = true; });
+$('#cancel-settings').addEventListener('click', () => { $('#paste-box').hidden = true; });
+$('#open-settings').addEventListener('change', (e) => {
+  const f = e.target.files && e.target.files[0]; if (!f) return;
+  const r = new FileReader();
+  r.onload = () => loadSettings(String(r.result));
+  r.readAsText(f);
+  e.target.value = '';
+});
+if (standalone) {
+  $('#save-settings').hidden = false;
+  $('#save-settings').addEventListener('click', () => {
+    const a = document.createElement('a');
+    a.href = URL.createObjectURL(new Blob([JSON.stringify({ cabinet_builder: 1, ...cfg }, null, 2)], { type: 'application/json' }));
+    a.download = 'cabinet-settings.json'; a.click();
     setTimeout(() => URL.revokeObjectURL(a.href), 1000);
   });
 }
