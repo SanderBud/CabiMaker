@@ -20,9 +20,13 @@ Carcass
 Drawers (plain boxes, front flush with the cabinet front), built like the carcass
   * Drawer box = opening minus `clearance` on every side (left, right, top, bottom)
     and minus `clearance` at the back.
-  * The drawer sides run the full drawer height and depth.
-  * The bottom fits between the sides (full depth); front and back fit between the
-    sides and stand on the bottom.
+  * drawer_sides "full": sides run the full drawer height, the bottom fits between them.
+    drawer_sides "on_bottom": the bottom runs the full width, the sides stand on it.
+  * drawer_front "inset": the front fits between the sides (side and bottom edges show).
+    drawer_front "full": one front panel covers the whole drawer face; sides and bottom
+    stop behind it. The back always fits between the sides, on top of the bottom.
+  * cut_scope limits the cut list, sheets and nails to the cabinet or the drawers
+    (e.g. when the drawers are 3D printed).
 
 Materials
   * Plywood you already have (`stock`) is filled first; the rest goes on new sheets
@@ -46,6 +50,9 @@ DEFAULT_CONFIG = {
     "clearance": 2, "sink": 6,
     "sheet_length": 2440, "sheet_width": 1220, "kerf": 3,
     "nail_spacing": 100,
+    "drawer_front": "inset",     # "inset" or "full" (one face covering the drawer's edges)
+    "drawer_sides": "full",      # "full" (sides full height) or "on_bottom" (sides stand on the bottom)
+    "cut_scope": "all",          # "all", "cabinet" or "drawers": what goes in the cut list
     "stock": [],   # e.g. [{"thickness": 12, "length": 1220, "width": 1220, "count": 1}]
     "rows": [
         {"drawers": 2, "height": "auto", "widths": "auto"},
@@ -149,6 +156,15 @@ def compute(cfg):
     kerf = num(cfg, "kerf", minimum=0)
     nail_spacing = num(cfg, "nail_spacing", allow_zero=False)
     stock = parse_stock(cfg.get("stock") or [])
+    d_front = str(cfg.get("drawer_front", "inset"))
+    d_sides = str(cfg.get("drawer_sides", "full"))
+    scope = str(cfg.get("cut_scope", "all"))
+    if d_front not in DRAWER_FRONTS:
+        raise CabinetError("drawer_front must be one of: %s." % ", ".join(DRAWER_FRONTS))
+    if d_sides not in DRAWER_SIDES:
+        raise CabinetError("drawer_sides must be one of: %s." % ", ".join(DRAWER_SIDES))
+    if scope not in ("all", "cabinet", "drawers"):
+        raise CabinetError("cut_scope must be 'all', 'cabinet' or 'drawers'.")
     rows_cfg = cfg.get("rows") or []
     if len(rows_cfg) == 0:
         raise CabinetError("Add at least one row.")
@@ -233,7 +249,7 @@ def compute(cfg):
             openings.append({"id": did, "row": i + 1, "col": j + 1,
                              "x0": r1(x), "x1": r1(x + w), "y0": r1(ybot), "y1": r1(ytop),
                              "width": r1(w), "height": r1(h)})
-            drawers.append(make_drawer(add, did, x, ybot, w, h, D, Dc, c, td))
+            drawers.append(make_drawer(add, did, x, ybot, w, h, D, Dc, c, td, d_front, d_sides))
             if j < n - 1:
                 xd = x + w
                 add("Divider", "row %d, between drawer %d and %d" % (i + 1, j + 1, j + 2),
@@ -269,18 +285,26 @@ def compute(cfg):
     if has_back:
         add("Back panel", "back", H, W, tb, box(0, 0, 0, W, H, tb))
 
-    cutlist = build_cutlist(pieces)
-    sheets, shopping = pack_sheets(pieces, stock, sheet_l, sheet_w, kerf, warnings)
-    nails = count_nails(W, H, Dc, t, tb, heights, counts, drawers, td, nail_spacing)
+    # the 3D view gets every piece; cut list, sheets and nails only the chosen scope
+    if scope == "cabinet":
+        cut_pieces = [p for p in pieces if p["drawer"] is None]
+    elif scope == "drawers":
+        cut_pieces = [p for p in pieces if p["drawer"] is not None]
+    else:
+        cut_pieces = pieces
+    cutlist = build_cutlist(cut_pieces)
+    sheets, shopping = pack_sheets(cut_pieces, stock, sheet_l, sheet_w, kerf, warnings)
+    nails = count_nails(W, H, Dc, t, tb, heights, counts, drawers, td, nail_spacing,
+                        scope != "drawers", scope != "cabinet")
 
     area = 0.0
-    for p in pieces:
+    for p in cut_pieces:
         area += p["length"] * p["width"]
     summary = {
         "outer": [r1(W), r1(H), r1(D)],
         "inner_width": r1(Wi), "carcass_depth": r1(Dc),
         "row_heights": [r1(h) for h in heights],
-        "piece_count": len(pieces), "drawer_count": len(drawers),
+        "piece_count": len(cut_pieces), "drawer_count": len(drawers), "scope": scope,
         "area_m2": round(area / 1e6 * 100) / 100,
         "sheet_count": len(sheets),
         "buy": shopping,
@@ -291,28 +315,54 @@ def compute(cfg):
             "cutlist": cutlist, "sheets": sheets, "nails": nails}
 
 
-def make_drawer(add, did, x, y, w, h, D, Dc, c, td):
+DRAWER_FRONTS = ("inset", "full")       # inset: front between the sides; full: one face covering all edges
+DRAWER_SIDES = ("full", "on_bottom")     # full: sides full height, bottom between; on_bottom: sides stand on the bottom
+
+
+def make_drawer(add, did, x, y, w, h, D, Dc, c, td, front="inset", sides="full"):
     dw = w - 2 * c
     dh = h - 2 * c
     dd = Dc - c
     if dw <= 2 * td + 1 or dh <= td + 1 or dd <= 2 * td + 1:
         raise CabinetError("Drawer %s is too small (%s x %s x %s mm) for %s mm drawer plywood."
                            % (did, r1(dw), r1(dh), r1(dd), r1(td)))
-    bx0 = x + c
-    by0 = y + c
-    bz0 = D - dd
+    x0 = x + c
+    y0 = y + c
+    z0 = D - dd
+    x1, y1, z1 = x0 + dw, y0 + dh, D
     tag = "drawer " + did
-    add("Drawer side", tag + " left", dd, dh, td, box(bx0, by0, bz0, bx0 + td, by0 + dh, D), drawer=did)
-    add("Drawer side", tag + " right", dd, dh, td, box(bx0 + dw - td, by0, bz0, bx0 + dw, by0 + dh, D), drawer=did)
-    add("Drawer bottom", tag, dw - 2 * td, dd, td, box(bx0 + td, by0, bz0, bx0 + dw - td, by0 + td, D), drawer=did)
-    add("Drawer front", tag, dw - 2 * td, dh - td, td,
-        box(bx0 + td, by0 + td, D - td, bx0 + dw - td, by0 + dh, D), drawer=did)
+    full_face = front == "full"
+    zf = z1 - td if full_face else z1          # where the sides/bottom stop at the front
+    joints = []                                # (description, joint length) per joint
+    if full_face:
+        add("Drawer front", tag + " (full face)", dw, dh, td, box(x0, y0, z1 - td, x1, y1, z1), drawer=did)
+    if sides == "full":
+        add("Drawer side", tag + " left", zf - z0, dh, td, box(x0, y0, z0, x0 + td, y1, zf), drawer=did)
+        add("Drawer side", tag + " right", zf - z0, dh, td, box(x1 - td, y0, z0, x1, y1, zf), drawer=did)
+        add("Drawer bottom", tag, dw - 2 * td, zf - z0, td, box(x0 + td, y0, z0, x1 - td, y0 + td, zf), drawer=did)
+        joints += [("Drawer sides into bottom", zf - z0)] * 2
+    else:
+        add("Drawer bottom", tag, dw, zf - z0, td, box(x0, y0, z0, x1, y0 + td, zf), drawer=did)
+        add("Drawer side", tag + " left", zf - z0, dh - td, td, box(x0, y0 + td, z0, x0 + td, y1, zf), drawer=did)
+        add("Drawer side", tag + " right", zf - z0, dh - td, td, box(x1 - td, y0 + td, z0, x1, y1, zf), drawer=did)
+        joints += [("Drawer bottom into sides", zf - z0)] * 2
+    side_h = dh if sides == "full" else dh - td
+    if not full_face:
+        add("Drawer front", tag, dw - 2 * td, dh - td, td,
+            box(x0 + td, y0 + td, z1 - td, x1 - td, y1, z1), drawer=did)
+        joints += [("Drawer sides into front", dh - td)] * 2
+        joints += [("Drawer bottom into front", dw - 2 * td)]
+    else:
+        joints += [("Full-face front into sides", side_h)] * 2
+        joints += [("Full-face front into bottom", dw if sides == "on_bottom" else dw - 2 * td)]
     add("Drawer back", tag, dw - 2 * td, dh - td, td,
-        box(bx0 + td, by0 + td, bz0, bx0 + dw - td, by0 + dh, bz0 + td), drawer=did)
+        box(x0 + td, y0 + td, z0, x1 - td, y1, z0 + td), drawer=did)
+    joints += [("Drawer sides into back", dh - td)] * 2
+    joints += [("Drawer bottom into back", dw - 2 * td)]
     return {"id": did, "opening": [r1(w), r1(h)],
             "outer": [r1(dw), r1(dh), r1(dd)],
             "inner": [r1(dw - 2 * td), r1(dh - td), r1(dd - 2 * td)],
-            "box": box(bx0, by0, bz0, bx0 + dw, by0 + dh, D)}
+            "box": box(x0, y0, z0, x1, y1, z1), "joints": joints}
 
 
 def letter(i):
@@ -355,7 +405,7 @@ def build_cutlist(pieces):
         for pid in g["piece_ids"]:
             mark_of[pid] = g["mark"]
     for p in pieces:
-        p["mark"] = mark_of[p["id"]]
+        p["mark"] = mark_of.get(p["id"])
     return out
 
 
@@ -497,7 +547,7 @@ def nail_length(through):
     return NAIL_SIZES[-1]
 
 
-def count_nails(W, H, Dc, t, tb, heights, counts, drawers, td, spacing):
+def count_nails(W, H, Dc, t, tb, heights, counts, drawers, td, spacing, cabinet=True, with_drawers=True):
     """Glue + nails every `spacing` mm along each joint, starting 25 mm from the ends."""
     def per_joint(L):
         return max(2, ceil_div(L - 50, spacing) + 1)
@@ -512,9 +562,10 @@ def count_nails(W, H, Dc, t, tb, heights, counts, drawers, td, spacing):
                        "nail_length": nail_length(through)})
 
     R = len(heights)
-    n_div = sum(n - 1 for n in counts)
-    add("Sides into top and bottom", 4, Dc, t)
-    add("Sides into shelves", 2 * (R - 1), Dc, t)
+    n_div = sum(n - 1 for n in counts) if cabinet else 0
+    if cabinet:
+        add("Sides into top and bottom", 4, Dc, t)
+        add("Sides into shelves", 2 * (R - 1), Dc, t)
     divider_nails = 0
     for i in range(R):
         divider_nails += 2 * (counts[i] - 1) * per_joint(Dc)
@@ -522,26 +573,26 @@ def count_nails(W, H, Dc, t, tb, heights, counts, drawers, td, spacing):
         groups.append({"joint": "Top, bottom and shelves into dividers", "joints": 2 * n_div,
                        "joint_length": r1(Dc), "nails": divider_nails, "through": r1(t),
                        "nail_length": nail_length(t)})
-    if tb > 0:
+    if tb > 0 and cabinet:
         add("Back panel into sides", 2, H, tb)
         add("Back panel into top and bottom", 2, W - 2 * t, tb)
         add("Back panel into shelves", R - 1, W - 2 * t, tb)
         for i in range(R):
             add("Back panel into dividers, row %d" % (i + 1), counts[i] - 1, heights[i], tb)
-    # drawers: sides into front/back and bottom, bottom into front/back
-    side_fb = side_bottom = bottom_fb = 0
-    for d in drawers:
-        dw, dh, dd = d["outer"]
-        side_fb += 4 * per_joint(dh - td)
-        side_bottom += 2 * per_joint(dd)
-        bottom_fb += 2 * per_joint(dw - 2 * td)
-    nd = len(drawers)
-    for joint, k, n in (("Drawer sides into front and back", 4 * nd, side_fb),
-                        ("Drawer sides into bottom", 2 * nd, side_bottom),
-                        ("Drawer bottom into front and back", 2 * nd, bottom_fb)):
-        if nd:
-            groups.append({"joint": joint, "joints": k, "joint_length": None, "nails": n,
-                           "through": r1(td), "nail_length": nail_length(td)})
+    # drawers: joints depend on the chosen drawer construction
+    if with_drawers and drawers:
+        order = []
+        agg = {}
+        for d in drawers:
+            for name, L in d["joints"]:
+                if name not in agg:
+                    agg[name] = [0, 0]
+                    order.append(name)
+                agg[name][0] += 1
+                agg[name][1] += per_joint(L)
+        for name in order:
+            groups.append({"joint": name, "joints": agg[name][0], "joint_length": None,
+                           "nails": agg[name][1], "through": r1(td), "nail_length": nail_length(td)})
     by_len = {}
     for g in groups:
         by_len[g["nail_length"]] = by_len.get(g["nail_length"], 0) + g["nails"]

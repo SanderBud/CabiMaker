@@ -12,6 +12,9 @@
   "sheet_width": 1220,
   "kerf": 3,
   "nail_spacing": 100,
+  "drawer_front": "inset",
+  "drawer_sides": "full",
+  "cut_scope": "all",
   "stock": [],
   "rows": [
     {

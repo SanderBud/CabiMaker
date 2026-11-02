@@ -32,7 +32,11 @@ Always run `python build.py` and commit `index.html` after changing `cabinet.py`
 - A shelf between rows is one continuous piece across the inner width.
 - Column dividers sit between two horizontal panels, sunk `sink` mm into a dado in both (length = opening height + 2 × sink). Columns in different rows need not line up.
 - Optional back panel covers the full back; carcass depth = depth − back thickness.
-- Drawers are built like the carcass: opening minus the margin on every side and at the back; the sides run the full height and depth, the bottom fits between the sides, and front and back fit between the sides on top of the bottom.
+- Drawers: opening minus the margin on every side and at the back. Two choices (`drawer_sides`, `drawer_front`):
+  - sides **top to bottom** (`full`, bottom fits between them) or **on the bottom** (`on_bottom`, bottom runs the full width);
+  - front **between the sides** (`inset`, side and bottom edges show) or **full face** (`full`, one panel covers the drawer front; sides and bottom stop behind it).
+  The back always fits between the sides, on top of the bottom.
+- `cut_scope` (`all`, `cabinet`, `drawers`) limits the cut list, sheet layout and nails to part of the build, e.g. when the drawers are 3D printed.
 - Materials: plywood you already have is filled first; the rest goes on new sheets (what you need to buy). Packing is a simple guillotine layout, so treat it as an estimate.
 - Nails: glue plus one nail every `nail_spacing` mm (default 100) along each joint, at least 2 per joint; +10 % spare in the shopping total.
 
