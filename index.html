@@ -41,6 +41,7 @@ body { background: var(--bg); color: var(--ink); font: 15px/1.45 var(--f-body); 
 header.top { grid-column: 1 / -1; display: flex; align-items: baseline; gap: 14px; flex-wrap: wrap; }
 h1 { font: 700 28px/1.1 var(--f-display); letter-spacing: .01em; margin: 0; text-wrap: balance; }
 .tag { font: 500 12px var(--f-mono); color: var(--muted); }
+header.top .units { margin-left: auto; }
 aside { display: flex; flex-direction: column; gap: 14px; min-width: 0; }
 section.box { background: var(--panel); border: 1px solid var(--line); border-radius: var(--r); padding: 14px; display: flex; flex-direction: column; gap: 10px; }
 h2 { font: 600 13px/1 var(--f-display); text-transform: uppercase; letter-spacing: .09em; color: var(--muted); margin: 0; }
@@ -169,7 +170,11 @@ kbd { font: 12px var(--f-mono); border: 1px solid var(--line); border-radius: 3p
 <div class="app">
   <header class="top">
     <h1>Cabinet Builder</h1>
-    <span class="tag">plywood drawer cabinet · all sizes in mm</span>
+    <span class="tag">plywood drawer cabinet</span>
+    <div class="seg units" role="group" aria-label="Units">
+      <button type="button" data-opt="units" data-val="metric" id="u-metric">Metric (mm)</button>
+      <button type="button" data-opt="units" data-val="imperial" id="u-imperial">Imperial (in)</button>
+    </div>
   </header>
 
   <aside>
@@ -195,27 +200,27 @@ kbd { font: 12px var(--f-mono); border: 1px solid var(--line); border-radius: 3p
     <section class="box">
       <h2>Outer dimensions</h2>
       <div class="grid3">
-        <label class="f">Width<span class="inp" data-unit="mm"><input id="width" data-key="width" type="number" min="50" step="1"></span></label>
-        <label class="f">Height<span class="inp" data-unit="mm"><input id="height" data-key="height" type="number" min="50" step="1"></span></label>
-        <label class="f">Depth<span class="inp" data-unit="mm"><input id="depth" data-key="depth" type="number" min="50" step="1"></span></label>
+        <label class="f">Width<span class="inp" data-unit="mm"><input id="width" data-key="width" data-len="1" type="text" inputmode="decimal" autocomplete="off"></span></label>
+        <label class="f">Height<span class="inp" data-unit="mm"><input id="height" data-key="height" data-len="1" type="text" inputmode="decimal" autocomplete="off"></span></label>
+        <label class="f">Depth<span class="inp" data-unit="mm"><input id="depth" data-key="depth" data-len="1" type="text" inputmode="decimal" autocomplete="off"></span></label>
       </div>
     </section>
 
     <section class="box">
       <h2>Plywood</h2>
       <div class="grid2">
-        <label class="f">Cabinet thickness<span class="inp" data-unit="mm"><input id="thickness" data-key="thickness" type="number" min="1" step="0.5"></span></label>
-        <label class="f">Drawer thickness<span class="inp" data-unit="mm"><input id="drawer_thickness" data-key="drawer_thickness" type="number" min="1" step="0.5"></span></label>
+        <label class="f">Cabinet thickness<span class="inp" data-unit="mm"><input id="thickness" data-key="thickness" data-len="1" type="text" inputmode="decimal" autocomplete="off"></span></label>
+        <label class="f">Drawer thickness<span class="inp" data-unit="mm"><input id="drawer_thickness" data-key="drawer_thickness" data-len="1" type="text" inputmode="decimal" autocomplete="off"></span></label>
       </div>
       <label class="check"><input id="back_panel" data-key="back_panel" type="checkbox"> Back panel</label>
-      <label class="f">Back panel thickness<span class="inp" data-unit="mm"><input id="back_thickness" data-key="back_thickness" type="number" min="1" step="0.5"></span></label>
+      <label class="f">Back panel thickness<span class="inp" data-unit="mm"><input id="back_thickness" data-key="back_thickness" data-len="1" type="text" inputmode="decimal" autocomplete="off"></span></label>
     </section>
 
     <section class="box">
       <h2>Fit</h2>
       <div class="grid2">
-        <label class="f">Drawer margin per side<span class="inp" data-unit="mm"><input id="clearance" data-key="clearance" type="number" min="0" step="0.5"></span></label>
-        <label class="f">Column sink<span class="inp" data-unit="mm"><input id="sink" data-key="sink" type="number" min="0" step="0.5"></span></label>
+        <label class="f">Drawer margin per side<span class="inp" data-unit="mm"><input id="clearance" data-key="clearance" data-len="1" type="text" inputmode="decimal" autocomplete="off"></span></label>
+        <label class="f">Column sink<span class="inp" data-unit="mm"><input id="sink" data-key="sink" data-len="1" type="text" inputmode="decimal" autocomplete="off"></span></label>
       </div>
       <p class="hint">Margin is the gap between drawer and opening on each side and at the back. Column sink is the depth of the groove each column divider sits in, in the panel above and below it.</p>
     </section>
@@ -259,11 +264,11 @@ kbd { font: 12px var(--f-mono); border: 1px solid var(--line); border-radius: 3p
     <section class="box">
       <h2>Buying &amp; building</h2>
       <div class="grid3">
-        <label class="f">New sheet length<span class="inp" data-unit="mm"><input id="sheet_length" data-key="sheet_length" type="number" min="100" step="1"></span></label>
-        <label class="f">New sheet width<span class="inp" data-unit="mm"><input id="sheet_width" data-key="sheet_width" type="number" min="100" step="1"></span></label>
-        <label class="f">Saw kerf<span class="inp" data-unit="mm"><input id="kerf" data-key="kerf" type="number" min="0" step="0.5"></span></label>
+        <label class="f">New sheet length<span class="inp" data-unit="mm"><input id="sheet_length" data-key="sheet_length" data-len="1" type="text" inputmode="decimal" autocomplete="off"></span></label>
+        <label class="f">New sheet width<span class="inp" data-unit="mm"><input id="sheet_width" data-key="sheet_width" data-len="1" type="text" inputmode="decimal" autocomplete="off"></span></label>
+        <label class="f">Saw kerf<span class="inp" data-unit="mm"><input id="kerf" data-key="kerf" data-len="1" type="text" inputmode="decimal" autocomplete="off"></span></label>
       </div>
-      <label class="f">Nail every<span class="inp" data-unit="mm"><input id="nail_spacing" data-key="nail_spacing" type="number" min="20" step="10"></span></label>
+      <label class="f">Nail every<span class="inp" data-unit="mm"><input id="nail_spacing" data-key="nail_spacing" data-len="1" type="text" inputmode="decimal" autocomplete="off"></span></label>
     </section>
   </aside>
 
@@ -592,10 +597,10 @@ def compute(cfg):
                     notes=["length includes %s mm sink at both ends" % r1(s)] if s > 0 else [])
                 if s > 0:
                     rel = xd - t  # position measured from the left end of the horizontal panel
-                    above["notes"].append(("dado underside %s-%s mm from left end, %s deep"
+                    above["notes"].append(("dado underside %s-%s mm from left end, %s mm deep"
                                            % (r1(rel), r1(rel + t), r1(s))))
                     above.setdefault("dados", []).append({"face": "under", "from": r1(rel), "to": r1(rel + t)})
-                    below["notes"].append(("dado top face %s-%s mm from left end, %s deep"
+                    below["notes"].append(("dado top face %s-%s mm from left end, %s mm deep"
                                            % (r1(rel), r1(rel + t), r1(s))))
                     below.setdefault("dados", []).append({"face": "top", "from": r1(rel), "to": r1(rel + t)})
                 x = xd + t
@@ -613,7 +618,7 @@ def compute(cfg):
                                        "they cut through. Reduce the sink or shift a column."
                                        % (p["part"].lower(), u["from"], r1(s)))
                 if u["from"] < v["to"] and v["from"] < u["to"] and t - 2 * s < t / 2:
-                    warnings.append("The %s (%s) has dados on both faces at %s mm: only %s of %s mm of wood "
+                    warnings.append("The %s (%s) has dados on both faces at %s mm: only %s mm of %s mm of wood "
                                     "remains there, less than half the board." % (p["part"].lower(), p["label"], u["from"],
                                                                                  r1(t - 2 * s), r1(t)))
 
@@ -852,7 +857,7 @@ def pack_sheets(pieces, stock, SL, SW, kerf, warnings):
                 _place(bn, L, Wd, p, kerf)
                 bins.append(bn)
             else:
-                warnings.append("%s (%s, %s x %s mm) does not fit on a %s x %s sheet."
+                warnings.append("%s (%s, %s x %s mm) does not fit on a %s x %s mm sheet."
                                 % (p["part"], p["label"], L, Wd, r1(SL), r1(SW)))
         bins.sort(key=lambda bn: 0 if bn["source"] == "stock" else 1)
         n_stock = len([st for st in stock if st["thickness"] == T])
@@ -1041,7 +1046,7 @@ const DEFAULT = {
   width: 600, height: 900, depth: 400, thickness: 18, drawer_thickness: 18,
   back_panel: true, back_thickness: 18, clearance: 2, sink: 6,
   sheet_length: 2440, sheet_width: 1220, kerf: 3, nail_spacing: 100,
-  drawer_front: 'inset', drawer_sides: 'full', cut_scope: 'all',
+  drawer_front: 'inset', drawer_sides: 'full', cut_scope: 'all', units: 'metric',
   stock: [],
   rows: [
     { drawers: 2, height: 'auto', widths: 'auto' },
@@ -1050,6 +1055,60 @@ const DEFAULT = {
   ],
 };
 const clone = (o) => JSON.parse(JSON.stringify(o));
+
+/* ---------- units: the engine always works in mm; only the page converts ---------- */
+const imperial = () => cfg.units === 'imperial';
+const gcd = (a, b) => (b ? gcd(b, a % b) : a);
+function inchText(mm, denomSmall = 32, denomLarge = 16) {
+  const neg = mm < 0; const inches = Math.abs(mm) / 25.4;
+  const den = inches < 2 ? denomSmall : denomLarge;
+  const total = Math.round(inches * den);
+  const whole = Math.floor(total / den), num = total % den;
+  let out = whole ? String(whole) : '';
+  if (num) { const g = gcd(num, den); out += (whole ? ' ' : '') + `${num / g}/${den / g}`; }
+  return (neg ? '-' : '') + (out || '0');
+}
+const mmText = (mm) => String(Math.round(mm * 10) / 10);
+// value for an input box (no unit sign)
+const toField = (mm) => (typeof mm === 'number' ? (imperial() ? inchText(mm) : mmText(mm)) : String(mm));
+// value for display (inches get the ″ sign; mm stay bare, as before)
+const L = (mm) => (imperial() ? inchText(mm) + '″' : mmText(mm));
+const LU = (mm) => (imperial() ? inchText(mm) + '″' : mmText(mm) + ' mm');   // with unit, for running text
+const unitName = () => (imperial() ? 'in' : 'mm');
+const area = (m2) => (imperial() ? `${(m2 * 10.7639).toFixed(1)} ft²` : `${m2.toFixed(2)} m²`);
+// parse what the person typed, in the current unit, to mm (NaN when unreadable)
+function parseLen(str) {
+  const t = String(str).trim().replace(/[″"]|in$/g, '').trim();
+  if (t === '') return NaN;
+  if (!imperial()) { const v = Number(t.replace(',', '.')); return Number.isFinite(v) ? v : NaN; }
+  const m = t.match(/^(\d+(?:[.,]\d+)?)?(?:\s*[\s-]\s*)?(?:(\d+)\s*\/\s*(\d+))?$/);
+  if (!m || (!m[1] && !m[2])) return NaN;
+  let inches = m[1] ? Number(m[1].replace(',', '.')) : 0;
+  if (m[2]) { if (+m[3] === 0) return NaN; inches += +m[2] / +m[3]; }
+  if (m[1] && m[2] && /[.,]/.test(m[1])) return NaN;
+  return Math.round(inches * 25.4 * 1000) / 1000;
+}
+// row height / widths specs: "auto" or comma-separated sizes, stored in mm
+function specToField(spec) {
+  return String(spec).split(',').map((p) => p.trim()).filter((p) => p !== '')
+    .map((p) => (/^(auto|a|\*)$/i.test(p) ? p : (Number.isFinite(Number(p)) ? toField(Number(p)) : p))).join(', ');
+}
+function fieldToSpec(text) {
+  const parts = String(text).split(imperial() ? ',' : /[,;]/).map((p) => p.trim()).filter((p) => p !== '');
+  if (!parts.length) return 'auto';
+  return parts.map((p) => { if (/^(auto|a|\*)$/i.test(p)) return 'auto'; const v = parseLen(p); return Number.isFinite(v) ? String(v) : p; }).join(', ');
+}
+// convert "123 mm", "273-291 mm", "121.5 x 70 x 382 mm" inside engine messages and notes
+function convertText(str) {
+  if (!imperial()) return str;
+  return String(str).replace(/(\d+(?:\.\d+)?)((?:\s*(?:x|×|-|–)\s*\d+(?:\.\d+)?)*)\s*mm\b/g, (all, first, rest) => {
+    const nums = [first, ...(rest.match(/\d+(?:\.\d+)?/g) || [])];
+    const seps = rest.match(/\s*(?:x|×|-|–)\s*/g) || [];
+    let out = inchText(+nums[0]);
+    for (let i = 1; i < nums.length; i++) out += (/-|–/.test(seps[i - 1]) ? '–' : ' × ') + inchText(+nums[i]);
+    return out + '″';
+  });
+}
 let cfg = clone(DEFAULT);
 try {
   const saved = JSON.parse(localStorage.getItem(STORE_KEY) || 'null');
@@ -1063,8 +1122,10 @@ const keyInputs = [...document.querySelectorAll('[data-key]')];
 function fillInputs() {
   for (const el of keyInputs) {
     const k = el.dataset.key;
-    if (el.type === 'checkbox') el.checked = !!cfg[k]; else el.value = cfg[k];
+    if (el.type === 'checkbox') el.checked = !!cfg[k]; else el.value = el.dataset.len ? toField(cfg[k]) : cfg[k];
+    el.classList.remove('bad');
   }
+  document.querySelectorAll('.inp[data-unit]').forEach((u) => { u.dataset.unit = unitName(); });
   $('#back_thickness').disabled = !cfg.back_panel;
   renderOptions();
   renderRows();
@@ -1077,19 +1138,20 @@ function renderStock() {
     const card = document.createElement('div');
     card.className = 'row-card';
     card.innerHTML = `<div class="stock-fields">
-      <label>Thick<input id="stock-${i}-thickness" data-stock="${i}" data-f="thickness" type="number" min="1" step="0.5"></label>
-      <label>Length<input id="stock-${i}-length" data-stock="${i}" data-f="length" type="number" min="1" step="1"></label>
-      <label>Width<input id="stock-${i}-width" data-stock="${i}" data-f="width" type="number" min="1" step="1"></label>
+      <label>Thick<input id="stock-${i}-thickness" data-stock="${i}" data-f="thickness" type="text" inputmode="decimal" autocomplete="off"></label>
+      <label>Length<input id="stock-${i}-length" data-stock="${i}" data-f="length" type="text" inputmode="decimal" autocomplete="off"></label>
+      <label>Width<input id="stock-${i}-width" data-stock="${i}" data-f="width" type="text" inputmode="decimal" autocomplete="off"></label>
       <label>Count<input id="stock-${i}-count" data-stock="${i}" data-f="count" type="number" min="0" step="1"></label>
       <button type="button" class="icon" data-delstock="${i}" aria-label="Remove stock piece ${i + 1}">×</button></div>`;
     wrap.appendChild(card);
-    for (const f of ['thickness', 'length', 'width', 'count']) card.querySelector(`#stock-${i}-${f}`).value = r[f];
+    for (const f of ['thickness', 'length', 'width', 'count']) card.querySelector(`#stock-${i}-${f}`).value = f === 'count' ? r[f] : toField(r[f]);
   });
 }
 $('#stock').addEventListener('input', (e) => {
   const el = e.target; if (!el.dataset.stock) return;
-  const v = parseFloat(el.value);
+  const v = el.dataset.f === 'count' ? parseFloat(el.value) : parseLen(el.value);
   cfg.stock[+el.dataset.stock][el.dataset.f] = Number.isFinite(v) ? v : el.value;
+  el.classList.toggle('bad', !Number.isFinite(v));
   schedule();
 });
 $('#stock').addEventListener('click', (e) => {
@@ -1103,7 +1165,11 @@ for (const el of keyInputs) {
   el.addEventListener('input', () => {
     const k = el.dataset.key;
     if (el.type === 'checkbox') { cfg[k] = el.checked; $('#back_thickness').disabled = !el.checked; }
-    else { const v = parseFloat(el.value); cfg[k] = Number.isFinite(v) ? v : el.value; }
+    else {
+      const v = el.dataset.len ? parseLen(el.value) : parseFloat(el.value);
+      cfg[k] = Number.isFinite(v) ? v : el.value;
+      el.classList.toggle('bad', !Number.isFinite(v));
+    }
     schedule();
   });
 }
@@ -1123,14 +1189,14 @@ function renderRows() {
         <label>Widths<input id="row-${i}-widths" data-row="${i}" data-f="widths" type="text" placeholder="auto"></label>
       </div>`;
     wrap.appendChild(card);
-    for (const f of ['drawers', 'height', 'widths']) card.querySelector(`#row-${i}-${f}`).value = r[f];
+    for (const f of ['drawers', 'height', 'widths']) card.querySelector(`#row-${i}-${f}`).value = f === 'drawers' ? r[f] : specToField(r[f]);
   });
 }
 $('#rows').addEventListener('input', (e) => {
   const el = e.target; if (!el.dataset.row) return;
   const r = cfg.rows[+el.dataset.row];
   if (el.dataset.f === 'drawers') { const v = parseInt(el.value, 10); r.drawers = Number.isFinite(v) ? Math.min(Math.max(v, 1), 12) : 1; }
-  else r[el.dataset.f] = el.value.trim() === '' ? 'auto' : el.value;
+  else r[el.dataset.f] = fieldToSpec(el.value);
   schedule();
 });
 $('#rows').addEventListener('click', (e) => {
@@ -1143,7 +1209,12 @@ $('#add-row').addEventListener('click', () => {
 
 /* drawer construction + cut scope (segmented buttons) */
 const optButtons = [...document.querySelectorAll('[data-opt]')];
-for (const b of optButtons) b.addEventListener('click', () => { cfg[b.dataset.opt] = b.dataset.val; renderOptions(); schedule(); });
+for (const b of optButtons) b.addEventListener('click', () => {
+  const unitChange = b.dataset.opt === 'units' && cfg.units !== b.dataset.val;
+  cfg[b.dataset.opt] = b.dataset.val;
+  if (unitChange) fillInputs();
+  renderOptions(); schedule();
+});
 function renderOptions() {
   for (const b of optButtons) b.setAttribute('aria-pressed', cfg[b.dataset.opt] === b.dataset.val ? 'true' : 'false');
   renderDrawerPreview();
@@ -1303,7 +1374,7 @@ function buildScene(res) {
     st.group.add(handle); st.meshes.push(handle);
     const dg = new THREE.Group();
     const o = st.data.outer;
-    const l = label(`<b>${o[0]} × ${o[1]}</b><span>${o[2]} deep</span>`, 'drawer');
+    const l = label(`<b>${L(o[0])} × ${L(o[1])}</b><span>${L(o[2])} deep</span>`, 'drawer');
     l.position.set((bx0 + bx1) / 2, (by0 + by1) / 2 - 6, bz1 + 1);
     dg.add(l); st.group.add(dg); labelGroups.push(dg);
   }
@@ -1311,11 +1382,11 @@ function buildScene(res) {
   const dg = new THREE.Group();
   const off = Math.max(40, Math.max(W, H, D) * 0.06);
   const V = (x, y, z) => new THREE.Vector3(x, y, z);
-  dimLine(dg, V(0, -off, D), V(W, -off, D), V(1, 0, 0).cross(V(0, 0, 1)).normalize(), `${W}`);
-  dimLine(dg, V(-off, 0, D), V(-off, H, D), V(1, 0, 0), `${H}`);
-  dimLine(dg, V(W + off, 0, 0), V(W + off, 0, D), V(1, 0, 0), `${D}`);
+  dimLine(dg, V(0, -off, D), V(W, -off, D), V(1, 0, 0).cross(V(0, 0, 1)).normalize(), L(W));
+  dimLine(dg, V(-off, 0, D), V(-off, H, D), V(1, 0, 0), L(H));
+  dimLine(dg, V(W + off, 0, 0), V(W + off, 0, D), V(1, 0, 0), L(D));
   const rows = res.openings.filter((o) => o.col === 1);
-  for (const o of rows) dimLine(dg, V(W + off * 0.6, o.y0, D), V(W + off * 0.6, o.y1, D), V(1, 0, 0), `${o.height}`);
+  for (const o of rows) dimLine(dg, V(W + off * 0.6, o.y0, D), V(W + off * 0.6, o.y1, D), V(1, 0, 0), L(o.height));
   cab.add(dg); dimGroups.push(dg);
 
   applyToggles();
@@ -1389,9 +1460,9 @@ function selectDrawer(id) {
   const d = drawers.get(id).data;
   const marks = [...new Set(lastRes.pieces.filter((p) => p.drawer === id && p.mark).map((p) => `${p.mark} ${p.part.replace('Drawer ', '')}`))];
   info.innerHTML = `<h3>Drawer ${id}</h3><dl>
-    <dt>Opening</dt><dd>${d.opening[0]} × ${d.opening[1]}</dd>
-    <dt>Box</dt><dd>${d.outer[0]} × ${d.outer[1]} × ${d.outer[2]}</dd>
-    <dt>Inside</dt><dd>${d.inner[0]} × ${d.inner[1]} × ${d.inner[2]}</dd>
+    <dt>Opening</dt><dd>${d.opening.map(L).join(' × ')}</dd>
+    <dt>Box</dt><dd>${d.outer.map(L).join(' × ')}</dd>
+    <dt>Inside</dt><dd>${d.inner.map(L).join(' × ')}</dd>
     <dt>Pieces</dt><dd>${marks.length ? marks.join(', ') : 'not in the cut list'}</dd></dl>`;
   info.hidden = false;
 }
@@ -1441,8 +1512,8 @@ function renderTables(res) {
   const cut = $('#cut-table');
   cut.innerHTML = `<thead><tr><th>Mark</th><th>Part</th><th class="n">Qty</th><th class="n">Length</th><th class="n">Width</th><th class="n">Thick</th><th>Where</th></tr></thead><tbody>` +
     res.cutlist.map((g, i) => `<tr data-i="${i}"><td><span class="mark">${g.mark}</span></td><td>${esc(g.part)}</td><td class="n">${g.qty}</td>
-      <td class="n">${g.length}</td><td class="n">${g.width}</td><td class="n">${g.thickness}</td>
-      <td><div class="where">${esc(g.where.join(', '))}</div>${g.notes.map((n) => `<div class="note">${esc(n)}</div>`).join('')}</td></tr>`).join('') + '</tbody>';
+      <td class="n">${L(g.length)}</td><td class="n">${L(g.width)}</td><td class="n">${L(g.thickness)}</td>
+      <td><div class="where">${esc(g.where.join(', '))}</div>${g.notes.map((n) => `<div class="note">${esc(convertText(n))}</div>`).join('')}</td></tr>`).join('') + '</tbody>';
   cut.querySelectorAll('tbody tr').forEach((tr) => {
     tr.addEventListener('mouseenter', () => highlightPieces(res.cutlist[+tr.dataset.i].piece_ids));
     tr.addEventListener('mouseleave', () => highlightPieces(null));
@@ -1450,7 +1521,7 @@ function renderTables(res) {
 
   const dt = $('#drawer-table');
   dt.innerHTML = `<thead><tr><th>Drawer</th><th class="n">Opening w × h</th><th class="n">Box w × h × d</th><th class="n">Inside w × h × d</th></tr></thead><tbody>` +
-    res.drawers.map((d) => `<tr data-id="${d.id}" style="cursor:pointer"><td>${d.id}</td><td class="n">${d.opening.join(' × ')}</td><td class="n">${d.outer.join(' × ')}</td><td class="n">${d.inner.join(' × ')}</td></tr>`).join('') + '</tbody>';
+    res.drawers.map((d) => `<tr data-id="${d.id}" style="cursor:pointer"><td>${d.id}</td><td class="n">${d.opening.map(L).join(' × ')}</td><td class="n">${d.outer.map(L).join(' × ')}</td><td class="n">${d.inner.map(L).join(' × ')}</td></tr>`).join('') + '</tbody>';
   dt.querySelectorAll('tbody tr').forEach((tr) => tr.addEventListener('click', () => {
     const st = drawers.get(tr.dataset.id); if (!st) return;
     st.open = true; selectDrawer(tr.dataset.id);
@@ -1459,16 +1530,16 @@ function renderTables(res) {
   $('#buy').innerHTML = res.summary.buy.map((b) => {
     const own = b.stock_total ? `Using ${b.stock_used} of your ${b.stock_total} piece${b.stock_total === 1 ? '' : 's'}` : 'No stock of this thickness';
     const head = b.needed ? `<div class="big ${b.buy ? '' : 'zero'}">${b.buy ? `Buy ${b.buy}` : 'Nothing to buy'}</div>` : '<div class="big zero">Not needed</div>';
-    return `<div class="buy-card"><div class="t">${b.thickness} mm plywood</div>${head}
-      <div class="s">${b.buy ? `new sheet${b.buy === 1 ? '' : 's'} of ${cfgNum('sheet_length')} × ${cfgNum('sheet_width')}<br>` : ''}${own}</div></div>`;
+    return `<div class="buy-card"><div class="t">${LU(b.thickness)} plywood</div>${head}
+      <div class="s">${b.buy ? `new sheet${b.buy === 1 ? '' : 's'} of ${L(cfgNum('sheet_length'))} × ${LU(cfgNum('sheet_width'))}<br>` : ''}${own}</div></div>`;
   }).join('') + `<div class="buy-card"><div class="t">Nails</div><div class="big">≈ ${res.nails.by_length.reduce((a, n) => a + n.with_spare, 0)}</div>
-    <div class="s">${res.nails.by_length.map((n) => `${n.with_spare} × ${n.length} mm`).join('<br>')}</div></div>`;
+    <div class="s">${res.nails.by_length.map((n) => `${n.with_spare} × ${nailLen(n.length)}`).join('<br>')}</div></div>`;
 
   $('#nail-table').innerHTML = `<thead><tr><th>Joint</th><th class="n">Joints</th><th class="n">Nails</th><th class="n">Nail length</th></tr></thead><tbody>` +
-    res.nails.groups.map((g) => `<tr><td>${esc(g.joint)}${g.joint_length ? ` <span class="where">(${g.joint_length} mm each)</span>` : ''}</td>
-      <td class="n">${g.joints}</td><td class="n">${g.nails}</td><td class="n">${g.nail_length} mm</td></tr>`).join('') +
-    res.nails.by_length.map((n) => `<tr><td><b>Total ${n.length} mm nails</b> <span class="where">(+10% spare: ${n.with_spare})</span></td><td></td><td class="n"><b>${n.count}</b></td><td class="n">${n.length} mm</td></tr>`).join('') + '</tbody>';
-  $('#nail-hint').textContent = `Glue plus one nail every ${res.nails.spacing} mm along each joint, starting about 25 mm from the ends, at least 2 per joint. Nails go through the face of one panel into the edge of the other; length is roughly the panel thickness plus 1.5× that into the edge. Pre-drilling near the ends helps avoid splitting.`;
+    res.nails.groups.map((g) => `<tr><td>${esc(g.joint)}${g.joint_length ? ` <span class="where">(${LU(g.joint_length)} each)</span>` : ''}</td>
+      <td class="n">${g.joints}</td><td class="n">${g.nails}</td><td class="n">${nailLen(g.nail_length)}</td></tr>`).join('') +
+    res.nails.by_length.map((n) => `<tr><td><b>Total ${nailLen(n.length)} nails</b> <span class="where">(+10% spare: ${n.with_spare})</span></td><td></td><td class="n"><b>${n.count}</b></td><td class="n">${nailLen(n.length)}</td></tr>`).join('') + '</tbody>';
+  $('#nail-hint').textContent = `Glue plus one nail every ${LU(res.nails.spacing)} along each joint, starting about ${imperial() ? '1″' : '25 mm'} from the ends, at least 2 per joint. Nails go through the face of one panel into the edge of the other; length is roughly the panel thickness plus 1.5× that into the edge. Pre-drilling near the ends helps avoid splitting.`;
 
   const sh = $('#sheets');
   const maxL = Math.max(...res.sheets.map((s) => s.length), 1);   // one scale for every sheet
@@ -1479,20 +1550,22 @@ function renderTables(res) {
         (Math.min(L, Wd) > 40 ? `<text class="s-txt" x="${x + L / 2}" y="${y + Wd / 2}" font-size="${fs}">${mark}</text>` : '');
     }).join('');
     const src = s.source === 'stock' ? `<span class="src stock">your stock</span>` : `<span class="src to-buy">buy</span>`;
-    return `<div class="sheet"><h4>${s.thickness} mm · ${s.length} × ${s.width}${src} <span class="where">${s.fill}% used</span></h4>
+    return `<div class="sheet"><h4>${LU(s.thickness)} · ${L(s.length)} × ${L(s.width)}${src} <span class="where">${s.fill}% used</span></h4>
       <svg style="width:${((s.length + 20) / (maxL + 20) * 100).toFixed(2)}%" viewBox="-10 -10 ${s.length + 20} ${s.width + 20}" role="img" aria-label="Sheet ${i + 1} layout"><rect class="s-bg" x="0" y="0" width="${s.length}" height="${s.width}"></rect>${parts}</svg></div>`;
   }).join('');
 }
 const cfgNum = (k) => cfg[k];
+// nails: mm as computed, inches to the nearest 1/8 (how nails are sold)
+const nailLen = (mm) => (imperial() ? inchText(mm, 8, 8) + '″' : `${mm} mm`);
 
 function renderSummary(res) {
   const s = res.summary;
-  const buy = s.buy.filter((b) => b.buy).map((b) => `${b.buy} × ${b.thickness} mm`).join(', ');
-  $('#summary').innerHTML = `<span>Outer <b>${s.outer.join(' × ')}</b></span>
-    <span>Inner width <b>${s.inner_width}</b></span>
-    <span>Row heights <b>${s.row_heights.join(' / ')}</b></span>
+  const buy = s.buy.filter((b) => b.buy).map((b) => `${b.buy} × ${LU(b.thickness)}`).join(', ');
+  $('#summary').innerHTML = `<span>Outer <b>${s.outer.map(L).join(' × ')}</b></span>
+    <span>Inner width <b>${L(s.inner_width)}</b></span>
+    <span>Row heights <b>${s.row_heights.map(L).join(' / ')}</b></span>
     <span><b>${s.drawer_count}</b> drawers · <b>${s.piece_count}</b> pieces</span>
-    <span>Plywood <b>${s.area_m2.toFixed(2)} m²</b></span>
+    <span>Plywood <b>${area(s.area_m2)}</b></span>
     <span>Sheets to buy <b>${buy || 'none'}</b></span>
     <span>Nails ≈ <b>${res.nails.by_length.reduce((a, n) => a + n.with_spare, 0)}</b></span>`;
 }
@@ -1500,12 +1573,12 @@ function renderSummary(res) {
 let dismissed = new Set();
 try { dismissed = new Set(JSON.parse(localStorage.getItem(STORE_KEY + '-dismissed') || '[]')); } catch (e) { /* ignore */ }
 let lastMsgs = { errors: [], warnings: [] };
-const msgKey = (w) => w.replace(/only [\d.]+ of [\d.]+ mm/, 'only …');
+const msgKey = (w) => w.replace(/only [\d.]+ mm of [\d.]+ mm/, 'only …');
 function showMessages(res) {
   lastMsgs = { errors: res.errors || [], warnings: res.warnings || [] };
-  $('#msgs').innerHTML = lastMsgs.errors.map((e) => `<div class="msg err"><span>${esc(e)}</span></div>`).join('') +
+  $('#msgs').innerHTML = lastMsgs.errors.map((e) => `<div class="msg err"><span>${esc(convertText(e))}</span></div>`).join('') +
     lastMsgs.warnings.filter((w) => !dismissed.has(msgKey(w))).map((w) =>
-      `<div class="msg warn"><span>${esc(w)}</span><button type="button" class="x" data-dismiss="${esc(msgKey(w))}" aria-label="Dismiss warning">×</button></div>`).join('');
+      `<div class="msg warn"><span>${esc(convertText(w))}</span><button type="button" class="x" data-dismiss="${esc(msgKey(w))}" aria-label="Dismiss warning">×</button></div>`).join('');
 }
 $('#msgs').addEventListener('click', (e) => {
   const b = e.target.closest('[data-dismiss]'); if (!b) return;
@@ -1518,8 +1591,10 @@ $('#msgs').addEventListener('click', (e) => {
 function csv() {
   if (!lastRes) return '';
   const q = (v) => /[",\n]/.test(String(v)) ? `"${String(v).replace(/"/g, '""')}"` : String(v);
-  const lines = [['Mark', 'Part', 'Qty', 'Length', 'Width', 'Thickness', 'Where', 'Notes'].join(',')];
-  for (const g of lastRes.cutlist) lines.push([g.mark, g.part, g.qty, g.length, g.width, g.thickness, g.where.join('; '), g.notes.join('; ')].map(q).join(','));
+  const u = unitName();
+  const v = (mm) => (imperial() ? inchText(mm) : mmText(mm));
+  const lines = [['Mark', 'Part', 'Qty', `Length (${u})`, `Width (${u})`, `Thickness (${u})`, 'Where', 'Notes'].join(',')];
+  for (const g of lastRes.cutlist) lines.push([g.mark, g.part, g.qty, v(g.length), v(g.width), v(g.thickness), g.where.join('; '), g.notes.map(convertText).join('; ')].map(q).join(','));
   return lines.join('\n');
 }
 $('#copy-csv').addEventListener('click', async () => {

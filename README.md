@@ -45,4 +45,6 @@ Always run `python build.py` and commit `index.html` after changing `cabinet.py`
 In the page, **Copy settings** puts all your inputs on the clipboard as JSON; keep it in a note or file and use **Paste settings** (or **Open file**) to restore it. The same JSON works on the command line: `python cabinet.py my-settings.json`.
 
 
+Sizes in the settings are always stored in mm; the Metric/Imperial switch at the top of the page only changes what you type and see (inches accept decimals and fractions such as `23 5/8`). `units` in the settings remembers the choice.
+
 Sizes in mm. `stock` is a list of `{"thickness", "length", "width", "count"}` for plywood you already own. Row `height` and `widths` accept `auto` or numbers; `widths` is a comma-separated list per drawer (`"300, auto"`).

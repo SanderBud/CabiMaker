@@ -257,10 +257,10 @@ def compute(cfg):
                     notes=["length includes %s mm sink at both ends" % r1(s)] if s > 0 else [])
                 if s > 0:
                     rel = xd - t  # position measured from the left end of the horizontal panel
-                    above["notes"].append(("dado underside %s-%s mm from left end, %s deep"
+                    above["notes"].append(("dado underside %s-%s mm from left end, %s mm deep"
                                            % (r1(rel), r1(rel + t), r1(s))))
                     above.setdefault("dados", []).append({"face": "under", "from": r1(rel), "to": r1(rel + t)})
-                    below["notes"].append(("dado top face %s-%s mm from left end, %s deep"
+                    below["notes"].append(("dado top face %s-%s mm from left end, %s mm deep"
                                            % (r1(rel), r1(rel + t), r1(s))))
                     below.setdefault("dados", []).append({"face": "top", "from": r1(rel), "to": r1(rel + t)})
                 x = xd + t
@@ -278,7 +278,7 @@ def compute(cfg):
                                        "they cut through. Reduce the sink or shift a column."
                                        % (p["part"].lower(), u["from"], r1(s)))
                 if u["from"] < v["to"] and v["from"] < u["to"] and t - 2 * s < t / 2:
-                    warnings.append("The %s (%s) has dados on both faces at %s mm: only %s of %s mm of wood "
+                    warnings.append("The %s (%s) has dados on both faces at %s mm: only %s mm of %s mm of wood "
                                     "remains there, less than half the board." % (p["part"].lower(), p["label"], u["from"],
                                                                                  r1(t - 2 * s), r1(t)))
 
@@ -517,7 +517,7 @@ def pack_sheets(pieces, stock, SL, SW, kerf, warnings):
                 _place(bn, L, Wd, p, kerf)
                 bins.append(bn)
             else:
-                warnings.append("%s (%s, %s x %s mm) does not fit on a %s x %s sheet."
+                warnings.append("%s (%s, %s x %s mm) does not fit on a %s x %s mm sheet."
                                 % (p["part"], p["label"], L, Wd, r1(SL), r1(SW)))
         bins.sort(key=lambda bn: 0 if bn["source"] == "stock" else 1)
         n_stock = len([st for st in stock if st["thickness"] == T])
